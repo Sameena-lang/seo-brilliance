@@ -10,33 +10,205 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as IssuesRouteImport } from './routes/issues'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PagesRouteImport } from './routes/pages'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as IssuesIssueIdRouteImport } from './routes/issues.$issueId'
+import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
+import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as ScanIndexRouteImport } from './routes/scan.index'
+import { Route as ScanLiveRouteImport } from './routes/scan.live'
+import { Route as ScanResultsRouteImport } from './routes/scan.results'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IssuesRoute = IssuesRouteImport.update({
+  id: '/issues',
+  path: '/issues',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagesRoute = PagesRouteImport.update({
+  id: '/pages',
+  path: '/pages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IssuesIssueIdRoute = IssuesIssueIdRouteImport.update({
+  id: '/$issueId',
+  path: '/$issueId',
+  getParentRoute: () => IssuesRoute,
+} as any)
+const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScanIndexRoute = ScanIndexRouteImport.update({
+  id: '/scan/',
+  path: '/scan/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScanLiveRoute = ScanLiveRouteImport.update({
+  id: '/scan/live',
+  path: '/scan/live',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScanResultsRoute = ScanResultsRouteImport.update({
+  id: '/scan/results',
+  path: '/scan/results',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
+  '/issues': typeof IssuesRouteWithChildren
+  '/login': typeof LoginRoute
+  '/pages': typeof PagesRoute
+  '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
+  '/issues/$issueId': typeof IssuesIssueIdRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/scan/live': typeof ScanLiveRoute
+  '/scan/results': typeof ScanResultsRoute
+  '/projects/': typeof ProjectsIndexRoute
+  '/scan/': typeof ScanIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
+  '/issues': typeof IssuesRouteWithChildren
+  '/login': typeof LoginRoute
+  '/pages': typeof PagesRoute
+  '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
+  '/issues/$issueId': typeof IssuesIssueIdRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/scan/live': typeof ScanLiveRoute
+  '/scan/results': typeof ScanResultsRoute
+  '/projects': typeof ProjectsIndexRoute
+  '/scan': typeof ScanIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
+  '/issues': typeof IssuesRouteWithChildren
+  '/login': typeof LoginRoute
+  '/pages': typeof PagesRoute
+  '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
+  '/issues/$issueId': typeof IssuesIssueIdRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/scan/live': typeof ScanLiveRoute
+  '/scan/results': typeof ScanResultsRoute
+  '/projects/': typeof ProjectsIndexRoute
+  '/scan/': typeof ScanIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/issues'
+    | '/login'
+    | '/pages'
+    | '/register'
+    | '/reports'
+    | '/settings'
+    | '/issues/$issueId'
+    | '/projects/$projectId'
+    | '/scan/live'
+    | '/scan/results'
+    | '/projects/'
+    | '/scan/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/issues'
+    | '/login'
+    | '/pages'
+    | '/register'
+    | '/reports'
+    | '/settings'
+    | '/issues/$issueId'
+    | '/projects/$projectId'
+    | '/scan/live'
+    | '/scan/results'
+    | '/projects'
+    | '/scan'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/issues'
+    | '/login'
+    | '/pages'
+    | '/register'
+    | '/reports'
+    | '/settings'
+    | '/issues/$issueId'
+    | '/projects/$projectId'
+    | '/scan/live'
+    | '/scan/results'
+    | '/projects/'
+    | '/scan/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRoute
+  IssuesRoute: typeof IssuesRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  PagesRoute: typeof PagesRoute
+  RegisterRoute: typeof RegisterRoute
+  ReportsRoute: typeof ReportsRoute
+  SettingsRoute: typeof SettingsRoute
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
+  ScanLiveRoute: typeof ScanLiveRoute
+  ScanResultsRoute: typeof ScanResultsRoute
+  ProjectsIndexRoute: typeof ProjectsIndexRoute
+  ScanIndexRoute: typeof ScanIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +220,125 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/issues': {
+      id: '/issues'
+      path: '/issues'
+      fullPath: '/issues'
+      preLoaderRoute: typeof IssuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pages': {
+      id: '/pages'
+      path: '/pages'
+      fullPath: '/pages'
+      preLoaderRoute: typeof PagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/issues/$issueId': {
+      id: '/issues/$issueId'
+      path: '/$issueId'
+      fullPath: '/issues/$issueId'
+      preLoaderRoute: typeof IssuesIssueIdRouteImport
+      parentRoute: typeof IssuesRoute
+    }
+    '/projects/': {
+      id: '/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof ProjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId': {
+      id: '/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof ProjectsProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scan/': {
+      id: '/scan/'
+      path: '/scan'
+      fullPath: '/scan/'
+      preLoaderRoute: typeof ScanIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scan/live': {
+      id: '/scan/live'
+      path: '/scan/live'
+      fullPath: '/scan/live'
+      preLoaderRoute: typeof ScanLiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scan/results': {
+      id: '/scan/results'
+      path: '/scan/results'
+      fullPath: '/scan/results'
+      preLoaderRoute: typeof ScanResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface IssuesRouteChildren {
+  IssuesIssueIdRoute: typeof IssuesIssueIdRoute
+}
+
+const IssuesRouteChildren: IssuesRouteChildren = {
+  IssuesIssueIdRoute: IssuesIssueIdRoute,
+}
+
+const IssuesRouteWithChildren =
+  IssuesRoute._addFileChildren(IssuesRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRoute,
+  IssuesRoute: IssuesRouteWithChildren,
+  LoginRoute: LoginRoute,
+  PagesRoute: PagesRoute,
+  RegisterRoute: RegisterRoute,
+  ReportsRoute: ReportsRoute,
+  SettingsRoute: SettingsRoute,
+  ProjectsProjectIdRoute: ProjectsProjectIdRoute,
+  ScanLiveRoute: ScanLiveRoute,
+  ScanResultsRoute: ScanResultsRoute,
+  ProjectsIndexRoute: ProjectsIndexRoute,
+  ScanIndexRoute: ScanIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

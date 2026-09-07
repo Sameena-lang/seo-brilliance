@@ -1,15 +1,19 @@
 import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import type { ReactNode } from "react";
-import type { Severity } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+
+export type Severity = "critical" | "warning" | "info" | "CRITICAL" | "WARNING" | "INFO";
 
 export function SeverityBadge({ severity }: { severity: Severity }) {
   const map: Record<Severity, string> = {
     critical: "bg-destructive/10 text-destructive border-destructive/25",
     warning: "bg-warning/15 text-warning-foreground border-warning/35 dark:text-warning",
     info: "bg-info/10 text-info border-info/25",
+    CRITICAL: "bg-destructive/10 text-destructive border-destructive/25",
+    WARNING: "bg-warning/15 text-warning-foreground border-warning/35 dark:text-warning",
+    INFO: "bg-info/10 text-info border-info/25",
   };
   return (
     <span

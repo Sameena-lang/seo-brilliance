@@ -15,7 +15,6 @@ import {
 import type { ReactNode } from "react";
 import { Brand } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { notifications, projects } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -30,12 +29,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useProjects } from "@/hooks/use-api";
+import { useAuth } from "@/hooks/use-auth";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/projects", label: "Projects", icon: Folder },
   { to: "/scan", label: "New Scan", icon: Radar },
-  { to: "/results", label: "Audit Results", icon: FileBarChart },
+  { to: "/scan/results", label: "Audit Results", icon: FileBarChart },
   { to: "/issues", label: "Issues", icon: TriangleAlert },
   { to: "/pages", label: "Pages", icon: FileText },
   { to: "/reports", label: "Reports", icon: FileBarChart },
@@ -51,7 +52,8 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         Workspace
       </p>
       {nav.map((item) => {
-        const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
+        const isScanPage = item.to === "/scan";
+        const active = pathname === item.to || (!isScanPage && pathname.startsWith(`${item.to}/`));
         return (
           <Link
             key={item.to}
@@ -85,7 +87,11 @@ export function AppShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const unread = notifications.filter((n) => n.unread).length;
+  const { user, logout } = useAuth();
+  
+  // Clean empty state for notifications since backend doesn't support it yet
+  const unread = 0;
+  const notifications: any[] = [];
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[248px_1fr]">
@@ -125,15 +131,15 @@ export function AppShell({
 
             <ProjectSelector />
 
-            <div className="relative ml-auto hidden max-w-xs flex-1 md:block">
+            <form className="relative ml-auto hidden max-w-xs flex-1 md:block" onSubmit={(e) => e.preventDefault()}>
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search pages, issues, domains…"
                 aria-label="Search"
-                className="pl-9"
+                className="pl-9 bg-background"
               />
-            </div>
+            </form>
 
             <div className="ml-auto flex items-center gap-1 md:ml-0">
               <ThemeToggle />
@@ -151,15 +157,21 @@ export function AppShell({
                     Notifications
                   </p>
                   <ul className="divide-y divide-border">
-                    {notifications.map((n) => (
-                      <li key={n.title} className="px-4 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium">{n.title}</p>
-                          <span className="text-[11px] text-muted-foreground">{n.time}</span>
-                        </div>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>
+                    {notifications.length === 0 ? (
+                      <li className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        No new notifications
                       </li>
-                    ))}
+                    ) : (
+                      notifications.map((n) => (
+                        <li key={n.title} className="px-4 py-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium">{n.title}</p>
+                            <span className="text-[11px] text-muted-foreground">{n.time}</span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>
+                        </li>
+                      ))
+                    )}
                   </ul>
                 </PopoverContent>
               </Popover>
@@ -171,8 +183,8 @@ export function AppShell({
                     aria-label="Account menu"
                   >
                     <Avatar className="size-8">
-                      <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
-                        JL
+                      <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary uppercase">
+                        {user?.fullName?.substring(0, 2) || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <ChevronDown className="hidden size-3.5 text-muted-foreground sm:block" />
@@ -180,8 +192,8 @@ export function AppShell({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuLabel>
-                    <p className="text-sm font-medium">Jordan Lee</p>
-                    <p className="text-xs font-normal text-muted-foreground">jordan@acme-store.com</p>
+                    <p className="text-sm font-medium">{user?.fullName || "User"}</p>
+                    <p className="text-xs font-normal text-muted-foreground">{user?.email || ""}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -191,8 +203,8 @@ export function AppShell({
                     <Link to="/reports">Reports</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/login">Sign out</Link>
+                  <DropdownMenuItem onClick={() => logout()}>
+                    Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -218,26 +230,42 @@ export function AppShell({
 }
 
 function ProjectSelector() {
+  const { data: projects = [] } = useProjects();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  
+  // Try to find the active project from URL or default to first
+  const activeProjectId = pathname.match(/\/projects\/([^\/]+)/)?.[1];
+  const activeProject = projects.find((p: any) => p.id === activeProjectId) || projects[0];
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
-          <span className="size-2 rounded-full bg-success" />
-          <span className="max-w-[140px] truncate">acme-store.com</span>
+          {activeProject ? (
+            <>
+              <span className="size-2 rounded-full bg-success" />
+              <span className="max-w-[140px] truncate">{activeProject.domain || activeProject.name}</span>
+            </>
+          ) : (
+            <span className="max-w-[140px] truncate">Select Project</span>
+          )}
           <ChevronDown className="size-3.5 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-60">
         <DropdownMenuLabel>Switch project</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {projects.slice(0, 5).map((p) => (
-          <DropdownMenuItem key={p.id} asChild>
-            <Link to="/projects/$projectId" params={{ projectId: p.id }}>
-              <span className="flex-1 truncate">{p.domain}</span>
-              <span className="text-xs tabular-nums text-muted-foreground">{p.score}</span>
-            </Link>
-          </DropdownMenuItem>
-        ))}
+        {projects.length === 0 ? (
+          <div className="px-2 py-2 text-sm text-muted-foreground">No projects found</div>
+        ) : (
+          projects.slice(0, 5).map((p: any) => (
+            <DropdownMenuItem key={p.id} asChild>
+              <Link to="/projects/$projectId" params={{ projectId: p.id }}>
+                <span className="flex-1 truncate">{p.domain || p.name}</span>
+              </Link>
+            </DropdownMenuItem>
+          ))
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link to="/projects">View all projects</Link>

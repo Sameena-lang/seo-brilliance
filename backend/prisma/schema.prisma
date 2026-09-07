@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+  CLIENT
+}
+
+enum ScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum IssueSeverity {
+  CRITICAL
+  WARNING
+  INFO
+}
+
+enum IssueStatus {
+  OPEN
+  FIXED
+  IGNORED
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[]
+  projects Project[]
+}
+
+model User {
+  id             String       @id @default(uuid())
+  organizationId String
+  fullName       String
+  email          String       @unique
+  passwordHash   String
+  role           Role         @default(USER)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projects       Project[]
+
+  @@index([organizationId])
+}
+
+model Project {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String?
+  name           String
+  domain         String
+  rootUrl        String
+  crawlSettings  Json?        // Stores maxPages, maxDepth, respectRobots, etc.
+  status         String       @default("ACTIVE")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  scans          Scan[]
+
+  @@index([organizationId])
+}
+
+model Scan {
+  id               String       @id @default(uuid())
+  projectId        String
+  status           ScanStatus   @default(PENDING)
+  progressPercentage Int        @default(0)
+  pagesDiscovered  Int          @default(0)
+  pagesCrawled     Int          @default(0)
+  pagesFailed      Int          @default(0)
+  issuesFound      Int          @default(0)
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pages            Page[]
+  aiSummary        AiSummary?
+  report           Report?
+  siteScore        SiteScore?
+  crawlLogs        CrawlLog[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model Page {
+  id                 String       @id @default(uuid())
+  scanId             String
+  url                String
+  normalizedUrl      String
+  statusCode         Int?
+  contentType        String?
+  title              String?
+  metaDescription    String?
+  canonicalUrl       String?
+  robotsDirectives   String?
+  h1                 String?
+  h1Count            Int          @default(0)
+  headingsCount      Int          @default(0)
+  imagesTotal        Int          @default(0)
+  imagesMissingAlt   Int          @default(0)
+  internalLinksCount Int          @default(0)
+  externalLinksCount Int          @default(0)
+  brokenLinksCount   Int          @default(0)
+  loadTimeMs         Int?
+  schemaTypes        String[]     @default([])
+  schemaErrors       String[]     @default([])
+  isIndexable        Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  scan               Scan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  issues             Issue[]
+  coreWebVitals      CoreWebVital?
+
+  @@index([scanId])
+  @@index([normalizedUrl])
+}
+
+model Issue {
+  id             String       @id @default(uuid())
+  pageId         String
+  ruleCode       String
+  severity       IssueSeverity
+  url            String
+  title          String
+  evidence       Json?
+  recommendation String?
+  status         IssueStatus  @default(OPEN)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  page           Page         @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([severity])
+  @@index([status])
+}
+
+model SeoRule {
+  id             String       @id @default(uuid())
+  code           String       @unique
+  name           String
+  category       String
+  severity       IssueSeverity
+  description    String
+  recommendation String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model AiSummary {
+  id             String       @id @default(uuid())
+  scanId         String       @unique
+  summary        String
+  whyItMatters   String?
+  recommendation String?
+  priority       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  scan           Scan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+}
+
+model Report {
+  id             String       @id @default(uuid())
+  scanId         String       @unique
+  pdfUrl         String?
+  csvUrl         String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  scan           Scan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+}
+
+model SiteScore {
+  id                  String       @id @default(uuid())
+  scanId              String       @unique
+  overallScore        Int
+  technicalScore      Int
+  contentScore        Int
+  indexabilityScore   Int
+  performanceScore    Int
+  accessibilityScore  Int
+  structuredDataScore Int
+  criticalCount       Int          @default(0)
+  warningCount        Int          @default(0)
+  infoCount           Int          @default(0)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  scan                Scan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+}
+
+model CrawlLog {
+  id             String       @id @default(uuid())
+  scanId         String
+  url            String
+  message        String
+  level          String       @default("INFO")
+  createdAt      DateTime     @default(now())
+
+  scan           Scan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+}
+
+model CoreWebVital {
+  id             String       @id @default(uuid())
+  pageId         String       @unique
+  lcp            Float?
+  fid            Float?
+  cls            Float?
+  fcp            Float?
+  ttfb           Float?
+  inp            Float?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  page           Page         @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+}
+
+model Integration {
+  id             String       @id @default(uuid())
+  organizationId String       // We can relate to org if multi-tenant
+  provider       String
+  credentials    Json
+  status         String       @default("ACTIVE")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
