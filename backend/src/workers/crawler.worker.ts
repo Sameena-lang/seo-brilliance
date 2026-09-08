@@ -26,7 +26,7 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
   }
 
   // Ensure URL is safe
-  if (!isSafeUrl(url)) {
+  if (!(await isSafeUrl(url))) {
     await prisma.crawlLog.create({
       data: { scanId, url, message: 'Unsafe URL detected and skipped', level: 'WARNING' }
     });

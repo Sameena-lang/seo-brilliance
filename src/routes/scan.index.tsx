@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useActiveProject } from "@/hooks/use-active-project";
 
 export const Route = createFileRoute("/scan/")({
   component: ScanRoute,
@@ -17,9 +18,14 @@ export const Route = createFileRoute("/scan/")({
 
 function ScanRoute() {
   const [scope, setScope] = useState("subdomains");
+  const [enteredUrl, setEnteredUrl] = useState("");
   const navigate = useNavigate();
   const search: any = Route.useSearch();
-  const projectId = search?.projectId;
+  
+  const { activeProjectId, setProject } = useActiveProject();
+  
+  // Explicitly passed projectId from search params overrides active
+  const projectId = search?.projectId || activeProjectId;
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project', projectId],
@@ -27,15 +33,19 @@ function ScanRoute() {
     enabled: !!projectId,
   });
 
+  const createProjectMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/projects`, data),
+  });
+
   const updateProjectMutation = useMutation({
     mutationFn: (data: any) => api.put(`/projects/${projectId}`, data),
   });
 
   const startScanMutation = useMutation({
-    mutationFn: () => api.post(`/projects/${projectId}/scans`),
-    onSuccess: (data: any) => {
+    mutationFn: (targetProjectId: string) => api.post(`/projects/${targetProjectId}/scans`),
+    onSuccess: (data: any, targetProjectId: string) => {
       toast.success("Scan started successfully");
-      navigate({ to: "/scan/live", search: { scanId: data.data.id, projectId } });
+      navigate({ to: "/scan/live", search: { scanId: data.data.id, projectId: targetProjectId } });
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to start scan");
@@ -44,34 +54,39 @@ function ScanRoute() {
 
   const handleStartScan = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectId) {
-      toast.error("No project selected.");
-      return;
-    }
-
+    
     try {
-      // First update the project settings
-      await updateProjectMutation.mutateAsync({
+      let targetProjectId = projectId;
+      
+      // If we don't have a project context, create one from the entered URL
+      if (!targetProjectId) {
+        if (!enteredUrl) {
+          toast.error("Please enter a website URL.");
+          return;
+        }
+        
+        let domain = enteredUrl.replace(/^https?:\/\//i, '').split('/')[0];
+        
+        const newProjectRes = await createProjectMutation.mutateAsync({
+          name: domain,
+          domain: domain,
+        });
+        
+        targetProjectId = newProjectRes.data.id;
+        setProject(targetProjectId);
+      }
+      
+      // Update settings
+      await api.put(`/projects/${targetProjectId}`, {
         includeSubdomains: scope === "subdomains",
-        // In a full implementation, we'd capture all the other form fields here
       });
       
       // Then start the scan
-      startScanMutation.mutate();
-    } catch (err) {
-      // Error handled by mutation
+      startScanMutation.mutate(targetProjectId);
+    } catch (err: any) {
+      toast.error(err?.message || "An error occurred");
     }
   };
-
-  if (!projectId) {
-    return (
-      <AppShell title="New Audit" description="Configure and start a new SEO crawl.">
-        <div className="p-12 text-center text-muted-foreground">
-          Please select a project from the <Link to="/projects" className="text-primary hover:underline">Projects Dashboard</Link> first.
-        </div>
-      </AppShell>
-    );
-  }
 
   return (
     <AppShell
@@ -89,16 +104,29 @@ function ScanRoute() {
                 Scan Configuration
               </CardTitle>
               <CardDescription>
-                Configure crawl settings for {project?.domain || 'Loading...'}. We'll crawl the site and generate a comprehensive SEO report.
+                {projectId 
+                  ? `Configure crawl settings for ${project?.domain || 'Loading...'}. We'll crawl the site and generate a comprehensive SEO report.`
+                  : `Enter a website URL to create a new project and start an audit immediately.`
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
               <div className="space-y-3">
                 <Label htmlFor="url" className="text-base">Website URL</Label>
                 <div className="flex gap-2">
-                  <Input id="url" className="h-11 bg-muted" value={`https://${project?.domain || ''}`} disabled />
+                  <Input 
+                    id="url" 
+                    className="h-11 bg-background" 
+                    placeholder="e.g. example.com"
+                    value={projectId ? `https://${project?.domain || ''}` : enteredUrl}
+                    onChange={(e) => setEnteredUrl(e.target.value)}
+                    disabled={!!projectId || isLoading} 
+                    required 
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground">The domain is locked to the project settings.</p>
+                <p className="text-xs text-muted-foreground">
+                  {projectId ? 'The domain is locked to the project settings.' : 'We will automatically extract the domain to create your project.'}
+                </p>
               </div>
 
               <div className="space-y-4 pt-4 border-t border-border">
@@ -152,8 +180,8 @@ function ScanRoute() {
               <Button variant="ghost" type="button" asChild>
                 <Link to="/projects">Cancel</Link>
               </Button>
-              <Button type="submit" disabled={startScanMutation.isPending || isLoading} className="gap-2 shadow-md shadow-primary/20">
-                {startScanMutation.isPending ? 'Starting...' : 'Start Audit'} <ArrowRight className="size-4" />
+              <Button type="submit" disabled={startScanMutation.isPending || createProjectMutation.isPending || isLoading} className="gap-2 shadow-md shadow-primary/20">
+                {(startScanMutation.isPending || createProjectMutation.isPending) ? 'Starting...' : 'Start Audit'} <ArrowRight className="size-4" />
               </Button>
             </CardFooter>
           </Card>

@@ -13,6 +13,10 @@ router.get('/', (req: any, res, next) => {
   }
   return pageController.getAllPages(req, res, next);
 });
+
+// CSV Export route
+router.get('/export', pageController.exportScanPages);
+
 // Expected to be mounted at /pages
 router.get('/:pageId', pageController.getPageDetails);
 

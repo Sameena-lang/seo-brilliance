@@ -16,6 +16,19 @@ services:
     volumes:
       - ./storage:/app/storage
 
+  worker:
+    build: .
+    command: npm run start:worker
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/seo_intelligence?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=super-secret-jwt-key
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./storage:/app/storage
+
   db:
     image: postgres:15
     environment:

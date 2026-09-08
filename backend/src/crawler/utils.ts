@@ -1,4 +1,5 @@
 import { URL } from 'url';
+import dns from 'dns';
 
 export const normalizeUrl = (rawUrl: string, baseUrl: string): string | null => {
   try {
@@ -28,22 +29,36 @@ export const isAllowedDomain = (urlStr: string, rootUrlStr: string, includeSubdo
   }
 };
 
-export const isSafeUrl = (urlStr: string): boolean => {
+export const isSafeUrl = async (urlStr: string): Promise<boolean> => {
   try {
     const url = new URL(urlStr);
     if (!['http:', 'https:'].includes(url.protocol)) return false;
 
     const hostname = url.hostname.toLowerCase();
     
-    // Basic SSRF protection
+    // Basic textual SSRF protection
     if (
       hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '::1' ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('192.168.') ||
-      hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) ||
       hostname.endsWith('.local')
+    ) {
+      return false;
+    }
+
+    // Resolve IP to prevent DNS rebinding or obfuscated IPs
+    const lookupResult = await dns.promises.lookup(hostname).catch(() => null);
+    if (!lookupResult) return false;
+
+    const ip = lookupResult.address;
+    
+    if (
+      ip === '127.0.0.1' ||
+      ip === '::1' ||
+      ip.startsWith('10.') ||
+      ip.startsWith('192.168.') ||
+      ip.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) ||
+      ip.startsWith('169.254.') || // Link-local
+      ip.startsWith('fc00:') || ip.startsWith('fd00:') || // IPv6 unique local address
+      ip.startsWith('fe80:') // IPv6 link-local
     ) {
       return false;
     }

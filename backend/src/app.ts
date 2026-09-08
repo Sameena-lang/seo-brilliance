@@ -32,7 +32,7 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin) || /^http:\/\/localhost:\d+$/.test(origin)) {
       callback(null, true);
     } else {
-      callback(null, true);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true
@@ -60,9 +60,20 @@ app.use('/api/v1/pages', pageRoutes);
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/reports', reportRoutes);
 
+import prisma from './config/db';
+import { redisConnection } from './queues/index';
+
 // Health check route
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ success: true, message: 'Server is running' });
+app.get('/health', async (req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    const redisPing = await redisConnection.ping();
+    if (redisPing !== 'PONG') throw new Error('Redis ping failed');
+
+    res.status(200).json({ success: true, message: 'Server is running, Database and Redis are healthy.' });
+  } catch (error) {
+    res.status(503).json({ success: false, message: 'Service Unavailable' });
+  }
 });
 
 // Error handling middleware

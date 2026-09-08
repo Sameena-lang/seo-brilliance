@@ -229,13 +229,10 @@ export function AppShell({
   );
 }
 
+import { useActiveProject } from "@/hooks/use-active-project";
+
 function ProjectSelector() {
-  const { data: projects = [] } = useProjects();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  
-  // Try to find the active project from URL or default to first
-  const activeProjectId = pathname.match(/\/projects\/([^\/]+)/)?.[1];
-  const activeProject = projects.find((p: any) => p.id === activeProjectId) || projects[0];
+  const { activeProject, setProject, projects } = useActiveProject();
 
   return (
     <DropdownMenu>
@@ -259,10 +256,8 @@ function ProjectSelector() {
           <div className="px-2 py-2 text-sm text-muted-foreground">No projects found</div>
         ) : (
           projects.slice(0, 5).map((p: any) => (
-            <DropdownMenuItem key={p.id} asChild>
-              <Link to="/projects/$projectId" params={{ projectId: p.id }}>
-                <span className="flex-1 truncate">{p.domain || p.name}</span>
-              </Link>
+            <DropdownMenuItem key={p.id} onClick={() => setProject(p.id)} className="cursor-pointer">
+              <span className="flex-1 truncate">{p.domain || p.name}</span>
             </DropdownMenuItem>
           ))
         )}
