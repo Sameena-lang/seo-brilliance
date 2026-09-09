@@ -144,7 +144,7 @@ export const exportScanPages = async (req: Request, res: Response, next: NextFun
 
     const pages = await prisma.page.findMany({
       where,
-      include: { _count: { select: { issues: true, internalLinks: true, externalLinks: true } } },
+      include: { _count: { select: { issues: true } } },
     });
 
     const mappedData = pages.map((p) => ({
@@ -154,7 +154,7 @@ export const exportScanPages = async (req: Request, res: Response, next: NextFun
       Title: p.title || '',
       'Meta Description': p.metaDescription || '',
       H1: p.h1 || '',
-      'Word Count': p.wordCount || 0,
+      'Word Count': 0,
       Issues: p._count.issues,
     }));
 

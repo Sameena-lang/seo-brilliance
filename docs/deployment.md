@@ -41,7 +41,7 @@ The repository uses a single codebase for both the API and the background worker
 - **API Process Start Command:** `npm start` (Runs `node dist/server.js`)
 - **Worker Process Start Command:** `npm run start:worker` (Runs `node dist/worker.js`)
 
-If using Docker, the provided `docker-compose.yml` serves as a blueprint for this separation.
+If using Docker, the provided `backend/docker-compose.yml` serves as a blueprint for this separation.
 
 ## 5. Health Checks
 
