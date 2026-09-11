@@ -4,7 +4,7 @@ import { queryKeys } from '../lib/query-keys';
 
 export function useLatestScan(projectId: string | null) {
   return useQuery({
-    queryKey: queryKeys.scans.all(projectId ?? ''),
+    queryKey: queryKeys.scans.byProject(projectId ?? ''),
     queryFn: async () => {
       // First get all scans for the project
       const res = await api.get(`/projects/${projectId}/scans`);

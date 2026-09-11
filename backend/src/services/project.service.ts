@@ -31,6 +31,7 @@ export const getProjectById = async (id: string, organizationId: string) => {
       scans: {
         orderBy: { createdAt: 'desc' },
         take: 5,
+        include: { siteScore: true }
       }
     }
   });

@@ -1,0 +1,5 @@
+"ruleCode","severity","title","url","status"
+"META_DESCRIPTION_MISSING","WARNING","Meta description is missing","https://www.chennaitales.in","OPEN"
+"H1_MISSING","WARNING","H1 tag is missing","https://www.chennaitales.in","OPEN"
+"HEADING_STRUCTURE","INFO","Poor heading structure","https://www.chennaitales.in","OPEN"
+"CANONICAL_MISSING","INFO","Canonical URL is missing","https://www.chennaitales.in","OPEN"

@@ -24,8 +24,10 @@ function ScanRoute() {
   
   const { activeProjectId, setProject } = useActiveProject();
   
-  // Explicitly passed projectId from search params overrides active
-  const projectId = search?.projectId || activeProjectId;
+  const [isNewProject, setIsNewProject] = useState(false);
+  
+  // Explicitly passed projectId from search params overrides active, unless user clicked New Domain
+  const projectId = isNewProject ? null : (search?.projectId || activeProjectId);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project', projectId],
@@ -78,7 +80,9 @@ function ScanRoute() {
       
       // Update settings
       await api.put(`/projects/${targetProjectId}`, {
-        includeSubdomains: scope === "subdomains",
+        crawlSettings: {
+          includeSubdomains: scope === "subdomains",
+        }
       });
       
       // Then start the scan
@@ -123,9 +127,22 @@ function ScanRoute() {
                     disabled={!!projectId || isLoading} 
                     required 
                   />
+                  {!!projectId && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="h-11 shrink-0"
+                      onClick={() => {
+                        setIsNewProject(true);
+                        setEnteredUrl(`https://${project?.domain || ''}`);
+                      }}
+                    >
+                      New Domain
+                    </Button>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {projectId ? 'The domain is locked to the project settings.' : 'We will automatically extract the domain to create your project.'}
+                  {projectId ? 'The domain is locked to the project settings. Click "New Domain" to scan a different website.' : 'We will automatically extract the domain to create your project.'}
                 </p>
               </div>
 

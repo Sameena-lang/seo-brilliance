@@ -29,19 +29,25 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
     _count: true
   });
 
+  const scanData = await prisma.scan.findUnique({
+    where: { id: scanId },
+    include: { project: true, siteScore: true }
+  });
+
   const prompt = `
-    Analyze the following SEO scan results for ${scan.project.domain} and provide an executive summary.
+    Analyze the following SEO audit results for ${scan.project.domain}.
     Total pages crawled: ${scan.pagesCrawled}
-    Issues found: ${JSON.stringify(issues)}
+    Overall SEO Score: ${scanData?.siteScore?.overallScore || 'N/A'}
+    Issues Summary: ${JSON.stringify(issues)}
     
-    CRITICAL RULE: Base your entire summary, why it matters, and recommendations strictly and ONLY on the provided Issues data above. Do not hallucinate pages, issues, measurements, or scores that are not explicitly present in the data. If the Issues list is empty, state that the site is fully healthy and no issues were detected.
+    CRITICAL RULE: Base your entire summary strictly and ONLY on the provided Issues data above. Do not hallucinate URLs, issues, measurements, or scores that are not explicitly present in the data. Do NOT use the word "prediction" or "predicted". This is an actual audit result.
     
     Return a JSON object with this exact structure:
     {
-      "summary": "2-3 sentences summarizing the overall site health based on the exact data provided.",
-      "whyItMatters": "1-2 sentences on why these specific issues impact SEO.",
-      "recommendation": "The top 1-2 actions to take immediately.",
-      "priority": "HIGH or MEDIUM or LOW"
+      "summary": "2-3 sentences providing an executive summary of the site's technical SEO health based on the exact score.",
+      "whyItMatters": "A bulleted list of the top 3 most critical problem areas found in the data.",
+      "recommendation": "A bulleted list of the top 3 immediate actions the development team should take.",
+      "priority": "HIGH or MEDIUM or LOW depending on the severity of the issues"
     }
   `;
 
@@ -65,30 +71,30 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
         });
       }
     } else {
-      // Stub for local dev without key
-      await prisma.aiSummary.upsert({
-        where: { scanId },
-        update: {
-          summary: "This is a placeholder summary. Please configure AI_API_KEY.",
-          whyItMatters: "SEO issues affect ranking.",
-          recommendation: "Fix critical issues.",
-          priority: "HIGH"
-        },
-        create: {
-          scanId,
-          summary: "This is a placeholder summary. Please configure AI_API_KEY.",
-          whyItMatters: "SEO issues affect ranking.",
-          recommendation: "Fix critical issues.",
-          priority: "HIGH"
-        }
-      });
+      throw new Error('No AI_API_KEY provided');
     }
-
+  } catch (error: any) {
+    console.error('AI Summary generation failed:', error.message || error);
+    // Stub for local dev without key or if OpenAI fails (e.g., 429 out of credits)
+    await prisma.aiSummary.upsert({
+      where: { scanId },
+      update: {
+        summary: "This is a placeholder summary. AI generation failed or was not configured.",
+        whyItMatters: "SEO issues affect ranking and user experience.",
+        recommendation: "Fix critical issues identified in the audit.",
+        priority: "HIGH"
+      },
+      create: {
+        scanId,
+        summary: "This is a placeholder summary. AI generation failed or was not configured.",
+        whyItMatters: "SEO issues affect ranking and user experience.",
+        recommendation: "Fix critical issues identified in the audit.",
+        priority: "HIGH"
+      }
+    });
+  } finally {
     // Queue Report Generation
     await reportQueue.add('generateReport', { scanId });
-
-  } catch (error) {
-    console.error('AI Summary generation failed:', error);
   }
 }, { connection, concurrency: 2 });
 

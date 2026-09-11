@@ -18,7 +18,7 @@ async function main() {
         category: rule.category,
         severity: rule.severity,
         description: rule.name,
-        recommendation: rule.evaluate({} as any)?.recommendation || 'Fix issue',
+        recommendation: (rule as any).howToFix || 'Fix issue',
       }
     });
   }

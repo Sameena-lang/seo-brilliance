@@ -11,12 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as IssuesRouteImport } from './routes/issues'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PagesRouteImport } from './routes/pages'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as IssuesIndexRouteImport } from './routes/issues.index'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues.$issueId'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
@@ -32,11 +32,6 @@ const IndexRoute = IndexRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IssuesRoute = IssuesRouteImport.update({
-  id: '/issues',
-  path: '/issues',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -64,10 +59,15 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IssuesIndexRoute = IssuesIndexRouteImport.update({
+  id: '/issues/',
+  path: '/issues/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IssuesIssueIdRoute = IssuesIssueIdRouteImport.update({
-  id: '/$issueId',
-  path: '/$issueId',
-  getParentRoute: () => IssuesRoute,
+  id: '/issues/$issueId',
+  path: '/issues/$issueId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   id: '/projects/',
@@ -98,7 +98,6 @@ const ScanResultsRoute = ScanResultsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/issues': typeof IssuesRouteWithChildren
   '/login': typeof LoginRoute
   '/pages': typeof PagesRoute
   '/register': typeof RegisterRoute
@@ -108,13 +107,13 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/scan/live': typeof ScanLiveRoute
   '/scan/results': typeof ScanResultsRoute
+  '/issues/': typeof IssuesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/scan/': typeof ScanIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/issues': typeof IssuesRouteWithChildren
   '/login': typeof LoginRoute
   '/pages': typeof PagesRoute
   '/register': typeof RegisterRoute
@@ -124,6 +123,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/scan/live': typeof ScanLiveRoute
   '/scan/results': typeof ScanResultsRoute
+  '/issues': typeof IssuesIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/scan': typeof ScanIndexRoute
 }
@@ -131,7 +131,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/issues': typeof IssuesRouteWithChildren
   '/login': typeof LoginRoute
   '/pages': typeof PagesRoute
   '/register': typeof RegisterRoute
@@ -141,6 +140,7 @@ export interface FileRoutesById {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/scan/live': typeof ScanLiveRoute
   '/scan/results': typeof ScanResultsRoute
+  '/issues/': typeof IssuesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/scan/': typeof ScanIndexRoute
 }
@@ -149,7 +149,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/issues'
     | '/login'
     | '/pages'
     | '/register'
@@ -159,13 +158,13 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/scan/live'
     | '/scan/results'
+    | '/issues/'
     | '/projects/'
     | '/scan/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
-    | '/issues'
     | '/login'
     | '/pages'
     | '/register'
@@ -175,13 +174,13 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/scan/live'
     | '/scan/results'
+    | '/issues'
     | '/projects'
     | '/scan'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/issues'
     | '/login'
     | '/pages'
     | '/register'
@@ -191,6 +190,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/scan/live'
     | '/scan/results'
+    | '/issues/'
     | '/projects/'
     | '/scan/'
   fileRoutesById: FileRoutesById
@@ -198,15 +198,16 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
-  IssuesRoute: typeof IssuesRouteWithChildren
   LoginRoute: typeof LoginRoute
   PagesRoute: typeof PagesRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
+  IssuesIssueIdRoute: typeof IssuesIssueIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ScanLiveRoute: typeof ScanLiveRoute
   ScanResultsRoute: typeof ScanResultsRoute
+  IssuesIndexRoute: typeof IssuesIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   ScanIndexRoute: typeof ScanIndexRoute
 }
@@ -225,13 +226,6 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/issues': {
-      id: '/issues'
-      path: '/issues'
-      fullPath: '/issues'
-      preLoaderRoute: typeof IssuesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -269,12 +263,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/issues/': {
+      id: '/issues/'
+      path: '/issues'
+      fullPath: '/issues/'
+      preLoaderRoute: typeof IssuesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/issues/$issueId': {
       id: '/issues/$issueId'
-      path: '/$issueId'
+      path: '/issues/$issueId'
       fullPath: '/issues/$issueId'
       preLoaderRoute: typeof IssuesIssueIdRouteImport
-      parentRoute: typeof IssuesRoute
+      parentRoute: typeof rootRouteImport
     }
     '/projects/': {
       id: '/projects/'
@@ -314,29 +315,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface IssuesRouteChildren {
-  IssuesIssueIdRoute: typeof IssuesIssueIdRoute
-}
-
-const IssuesRouteChildren: IssuesRouteChildren = {
-  IssuesIssueIdRoute: IssuesIssueIdRoute,
-}
-
-const IssuesRouteWithChildren =
-  IssuesRoute._addFileChildren(IssuesRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
-  IssuesRoute: IssuesRouteWithChildren,
   LoginRoute: LoginRoute,
   PagesRoute: PagesRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
+  IssuesIssueIdRoute: IssuesIssueIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   ScanLiveRoute: ScanLiveRoute,
   ScanResultsRoute: ScanResultsRoute,
+  IssuesIndexRoute: IssuesIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
   ScanIndexRoute: ScanIndexRoute,
 }

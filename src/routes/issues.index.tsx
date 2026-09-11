@@ -7,23 +7,27 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export const Route = createFileRoute("/issues")({
+import { useActiveProject } from "@/hooks/use-active-project";
+
+export const Route = createFileRoute("/issues/")({
   component: IssuesRoute,
 });
 
 function IssuesRoute() {
   const search: any = Route.useSearch();
   const scanId = search?.scanId;
+  const { activeProject } = useActiveProject();
 
   const { data: issuesRes, isLoading } = useQuery({
-    queryKey: ['issues', scanId],
+    queryKey: ['issues', scanId, activeProject?.id],
     queryFn: () => {
-      const url = scanId ? `/scans/${scanId}/issues` : `/issues`;
+      const url = scanId ? `/scans/${scanId}/issues` : `/issues?projectId=${activeProject?.id || ''}`;
       return api.get(url).then(res => res.data);
     },
+    refetchInterval: 3000,
   });
 
-  const issues = issuesRes?.data?.issues || [];
+  const issues = issuesRes?.issues || [];
 
   return (
     <AppShell

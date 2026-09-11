@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, Bot, Check, ChevronDown, FileCode2, ExternalLink, Sparkles, Terminal } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bot, Check, ChevronDown, FileCode2, ExternalLink, Sparkles, Terminal, BookOpen, Lightbulb, Code } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -37,7 +37,7 @@ function IssueDetailsRoute() {
     );
   }
 
-  const issue = issueRes?.data;
+  const issue = issueRes;
   
   if (!issue) {
     return (
@@ -81,7 +81,7 @@ function IssueDetailsRoute() {
               {issue.evidence && (
                 <>
                   <h4 className="font-semibold text-foreground text-base mt-6">Evidence</h4>
-                  <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs">
+                  <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs border border-border">
                     {JSON.stringify(issue.evidence, null, 2)}
                   </pre>
                 </>
@@ -89,23 +89,74 @@ function IssueDetailsRoute() {
             </CardContent>
           </Card>
 
-          {issue.recommendation && (
-            <Card className="border-primary/20 shadow-md">
-              <CardHeader className="bg-primary/5 pb-4 border-b border-primary/10">
-                <div className="flex items-center gap-2">
-                  <Bot className="size-5 text-primary" />
-                  <CardTitle className="text-lg text-primary">Recommendation</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-4">
-                  <p className="text-sm text-foreground">
-                    {issue.recommendation}
+          <div className="grid gap-4">
+            {issue.whyItMatters && (
+              <Card className="border-border">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2 text-foreground">
+                    <BookOpen className="size-4 text-primary" />
+                    <CardTitle className="text-lg">Why it Matters</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {issue.whyItMatters}
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
+
+            {issue.howToFix && (
+              <Card className="border-border">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2 text-foreground">
+                    <Lightbulb className="size-4 text-warning" />
+                    <CardTitle className="text-lg">How to Fix</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {issue.howToFix}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {issue.example && (
+              <Card className="border-border">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2 text-foreground">
+                    <Code className="size-4 text-success" />
+                    <CardTitle className="text-lg">Example</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <pre className="bg-muted p-4 rounded-md overflow-x-auto text-xs font-mono text-muted-foreground border border-border">
+                    {issue.example}
+                  </pre>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Fallback for AI recommendation if the others are missing */}
+            {!issue.whyItMatters && !issue.howToFix && issue.recommendation && (
+              <Card className="border-primary/20 shadow-md">
+                <CardHeader className="bg-primary/5 pb-4 border-b border-primary/10">
+                  <div className="flex items-center gap-2">
+                    <Bot className="size-5 text-primary" />
+                    <CardTitle className="text-lg text-primary">AI Recommendation</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="space-y-4">
+                    <p className="text-sm text-foreground">
+                      {issue.recommendation}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           <Card>
             <CardHeader>

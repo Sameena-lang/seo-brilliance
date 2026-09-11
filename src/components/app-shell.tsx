@@ -96,7 +96,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[248px_1fr]">
       <aside className="sticky top-0 hidden h-screen flex-col border-r border-sidebar-border bg-sidebar p-4 lg:flex">
-        <Brand to="/dashboard" className="px-1 py-2" />
+        <Brand to="/" className="px-1 py-2" />
         <div className="mt-6 flex-1">
           <SidebarNav />
         </div>
@@ -122,7 +122,7 @@ export function AppShell({
               </SheetTrigger>
               <SheetContent side="left" className="w-72 bg-sidebar p-4">
                 <SheetTitle className="sr-only">Navigation</SheetTitle>
-                <Brand to="/dashboard" className="px-1 py-2" />
+                <Brand to="/" className="px-1 py-2" />
                 <div className="mt-6">
                   <SidebarNav />
                 </div>
@@ -230,9 +230,25 @@ export function AppShell({
 }
 
 import { useActiveProject } from "@/hooks/use-active-project";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 
 function ProjectSelector() {
   const { activeProject, setProject, projects } = useActiveProject();
+  const router = useRouter();
+
+  const handleSelect = (id: string) => {
+    setProject(id);
+    // Clear project-specific params when switching projects globally
+    router.navigate({
+      to: router.state.location.pathname as any,
+      search: (prev: any) => {
+        const newSearch = { ...prev };
+        delete newSearch.scanId;
+        delete newSearch.projectId;
+        return newSearch;
+      }
+    });
+  };
 
   return (
     <DropdownMenu>
@@ -256,7 +272,7 @@ function ProjectSelector() {
           <div className="px-2 py-2 text-sm text-muted-foreground">No projects found</div>
         ) : (
           projects.slice(0, 5).map((p: any) => (
-            <DropdownMenuItem key={p.id} onClick={() => setProject(p.id)} className="cursor-pointer">
+            <DropdownMenuItem key={p.id} onClick={() => handleSelect(p.id)} className="cursor-pointer">
               <span className="flex-1 truncate">{p.domain || p.name}</span>
             </DropdownMenuItem>
           ))

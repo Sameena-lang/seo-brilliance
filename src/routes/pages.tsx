@@ -56,10 +56,11 @@ function PagesRoute() {
     },
     // Don't query if we don't even have an active project
     enabled: !!activeProjectId || !!scanId,
+    refetchInterval: 3000,
   });
 
-  const pages = pagesRes?.data?.pages || [];
-  const totalPagesCount = pagesRes?.data?.total || 0;
+  const pages = pagesRes?.pages || [];
+  const totalPagesCount = pagesRes?.total || 0;
   
   const handleExportCsv = async () => {
     if (!scanId) {
@@ -202,16 +203,16 @@ function PagesRoute() {
                   </tr>
                 ) : error ? (
                    <tr>
-                    <td colSpan={6} className="py-8 text-center text-destructive">Unable to load pages. Try again.</td>
+                    <td colSpan={6} className="py-8 text-center text-destructive">
+                      Unable to load pages. {(error as any)?.message || 'Please try again or check your server connection.'}
+                    </td>
                   </tr>
                 ) : pages.map((page: any) => (
                   <tr key={page.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs truncate max-w-[200px] sm:max-w-[300px]">
-                      <Link to="/pages" search={{ scanId }} className="hover:underline text-primary" onClick={(e) => {
-                         // Temporary fake click to show details
-                         e.preventDefault();
-                         window.open(`/pages/${page.id}?scanId=${scanId}`, '_blank');
-                      }}>{page.url}</Link>
+                      <a href={page.url} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary" title={page.url}>
+                        {page.url}
+                      </a>
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={page.statusCode === 200 ? "outline" : (page.statusCode >= 400 || !page.statusCode) ? "destructive" : "secondary"} className={page.statusCode === 200 ? "text-success border-success/30 bg-success/10" : ""}>

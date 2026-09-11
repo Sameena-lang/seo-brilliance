@@ -14,6 +14,15 @@ export const useCurrentUser = () => {
   });
 };
 
+// ─── Public ─────────────────────────────────────────────────────────────────
+
+export const usePublicAnalyze = () => {
+  return useMutation({
+    mutationFn: (url: string) => api.post('/public/analyze', { url }).then((res: any) => res.data),
+    onError: (err: any) => toast.error(err?.message ?? 'Failed to analyze URL'),
+  });
+};
+
 // ─── Projects ────────────────────────────────────────────────────────────────
 
 export const useProjects = () => {

@@ -1,14 +1,43 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MarketingNav, MarketingFooter } from "@/components/marketing-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, BarChart, Check, FileText, Search, Shield, Zap } from "lucide-react";
+import { ArrowRight, BarChart, Check, FileText, Search, Shield, Zap, AlertTriangle, XCircle, Info } from "lucide-react";
+import { usePublicAnalyze } from "@/hooks/use-api";
+import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 function Index() {
+  const [url, setUrl] = useState("");
+  const analyzeMutation = usePublicAnalyze();
+  const [result, setResult] = useState<any>(null);
+
+  const handleAnalyze = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!url) {
+      toast.error("Please enter a URL to analyze");
+      return;
+    }
+    
+    // Ensure protocol
+    let target = url;
+    if (!target.startsWith('http')) target = 'https://' + target;
+    
+    try {
+      const res = await analyzeMutation.mutateAsync(target);
+      if (res && res.success) {
+        setResult(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
       <MarketingNav />
@@ -27,30 +56,78 @@ function Index() {
                 Stop guessing what's holding back your rankings. Our AI analyzes your entire website and provides prioritized, actionable recommendations to improve your SEO performance instantly.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">
-                <div className="flex w-full max-w-md items-center space-x-2">
-                  <Input type="url" placeholder="https://yourwebsite.com" className="h-12 bg-background/50" />
-                  <Button size="lg" className="h-12 px-8 shadow-lg shadow-primary/25" asChild>
-                    <Link to="/scan">Analyze Website</Link>
+                <form onSubmit={handleAnalyze} className="flex w-full max-w-md items-center space-x-2">
+                  <Input 
+                    type="url" 
+                    placeholder="https://yourwebsite.com" 
+                    className="h-12 bg-background/50" 
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    disabled={analyzeMutation.isPending}
+                  />
+                  <Button type="submit" size="lg" className="h-12 px-8 shadow-lg shadow-primary/25" disabled={analyzeMutation.isPending}>
+                    {analyzeMutation.isPending ? "Analyzing..." : "Analyze Website"}
                   </Button>
-                </div>
+                </form>
               </div>
             </div>
             
-            {/* Dashboard Preview */}
-            <div className="mt-16 flow-root sm:mt-24">
-              <div className="-m-2 rounded-xl bg-muted/50 p-2 ring-1 ring-inset ring-foreground/10 lg:-m-4 lg:rounded-2xl lg:p-4">
-                <div className="rounded-md bg-background shadow-2xl ring-1 ring-foreground/10 flex items-center justify-center aspect-[16/9] overflow-hidden relative">
-                   <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-primary/5"></div>
-                   <div className="text-center space-y-4 relative z-10">
-                      <div className="inline-flex items-center justify-center p-4 bg-primary/10 rounded-full mb-4">
-                        <BarChart className="size-12 text-primary" />
+            {/* Conditional Result or Dashboard Preview */}
+            {result ? (
+              <div className="mt-16 flow-root sm:mt-24 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
+                <Card className="border-border shadow-2xl relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent"></div>
+                  <CardContent className="p-8 relative z-10">
+                    <div className="flex flex-col md:flex-row items-center gap-8">
+                      <div className="flex-shrink-0 text-center">
+                        <div className="inline-flex items-center justify-center p-4 bg-primary/10 rounded-full mb-4 ring-8 ring-primary/5">
+                          <BarChart className="size-10 text-primary" />
+                        </div>
+                        <h3 className="text-4xl font-bold tracking-tight">{result.score}<span className="text-2xl text-muted-foreground">/100</span></h3>
+                        <p className="text-sm font-medium text-muted-foreground mt-1">Basic Prediction</p>
                       </div>
-                      <h3 className="text-2xl font-bold">SEO Score: 92/100</h3>
-                      <p className="text-muted-foreground max-w-sm mx-auto">Your website is performing well, but there are 3 critical issues affecting your mobile rankings.</p>
-                   </div>
+                      
+                      <div className="flex-1 space-y-4">
+                        <h4 className="text-xl font-semibold">We found {result.totalIssuesDetected} potential issues on {result.url.replace(/^https?:\/\//, '')}</h4>
+                        <div className="space-y-2">
+                          {result.issues.map((issue: any, i: number) => (
+                            <div key={i} className="flex items-center gap-3 bg-muted/30 p-3 rounded-lg border border-border/50">
+                              {issue.severity === 'CRITICAL' ? <XCircle className="size-5 text-destructive" /> : 
+                               issue.severity === 'HIGH' ? <AlertTriangle className="size-5 text-orange-500" /> : 
+                               <Info className="size-5 text-blue-500" />}
+                              <span className="font-medium text-sm">{issue.title}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="pt-4 border-t border-border mt-4">
+                          <p className="text-sm text-muted-foreground mb-4">
+                            This is just a quick check of your homepage. To find all technical issues, broken links, and get AI-powered step-by-step fix methods, you need a full deep-crawl audit.
+                          </p>
+                          <Button size="lg" className="w-full sm:w-auto font-semibold shadow-md" asChild>
+                            <Link to="/register">Unlock Full Audit & AI Fixes <ArrowRight className="ml-2 size-4" /></Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="mt-16 flow-root sm:mt-24">
+                <div className="-m-2 rounded-xl bg-muted/50 p-2 ring-1 ring-inset ring-foreground/10 lg:-m-4 lg:rounded-2xl lg:p-4">
+                  <div className="rounded-md bg-background shadow-2xl ring-1 ring-foreground/10 flex items-center justify-center aspect-[16/9] overflow-hidden relative">
+                     <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-primary/5"></div>
+                     <div className="text-center space-y-4 relative z-10">
+                        <div className="inline-flex items-center justify-center p-4 bg-primary/10 rounded-full mb-4">
+                          <BarChart className="size-12 text-primary" />
+                        </div>
+                        <h3 className="text-2xl font-bold">SEO Score: 92/100</h3>
+                        <p className="text-muted-foreground max-w-sm mx-auto">Your website is performing well, but there are 3 critical issues affecting your mobile rankings.</p>
+                     </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
 
@@ -189,3 +266,4 @@ function Index() {
     </div>
   );
 }
+

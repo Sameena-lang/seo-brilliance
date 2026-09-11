@@ -35,18 +35,21 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
       where: { id: scanId },
       data: { pagesDiscovered: { decrement: 1 } }
     });
+    await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
 
   const normUrl = normalizeUrl(url, url);
   if (!normUrl) {
     await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+    await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
 
   // Check max depth
   if (currentDepth > (settings?.maxDepth || 3)) {
     await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+    await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
 
@@ -57,6 +60,7 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
 
   if (pageExists) {
     await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+    await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
 
@@ -74,6 +78,7 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     // Limit exceeded, give the slot back and abort
     await connection.decr(reserveKey);
     await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+    await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
 
@@ -222,6 +227,8 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     await prisma.crawlLog.create({
       data: { scanId, url, message: `Failed to crawl: ${error.message}`, level: 'ERROR' }
     });
+
+    await seoQueue.add('analyzeSeo', { scanId });
   }
 }, { connection, concurrency: 5 });
 

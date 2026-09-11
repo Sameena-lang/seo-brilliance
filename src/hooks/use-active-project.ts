@@ -20,9 +20,22 @@ export function useActiveProject() {
     }
   }, [projects, isLoading]);
 
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const stored = localStorage.getItem('seo_active_project');
+      if (stored && stored !== activeProjectId) {
+        setActiveProjectId(stored);
+      }
+    };
+
+    window.addEventListener('seo_project_changed', handleStorageChange);
+    return () => window.removeEventListener('seo_project_changed', handleStorageChange);
+  }, [activeProjectId]);
+
   const setProject = (id: string) => {
     setActiveProjectId(id);
     localStorage.setItem('seo_active_project', id);
+    window.dispatchEvent(new Event('seo_project_changed'));
   };
 
   const activeProject = projects.find((p: any) => p.id === activeProjectId) || projects[0];

@@ -15,23 +15,26 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
   if (pageId) {
     const page = await prisma.page.findUnique({ where: { id: pageId } });
     if (page) {
-      issues = await evaluatePage(page);
-      if (issues.length > 0) {
-        await prisma.issue.createMany({
-          data: issues.map(issue => ({
-            pageId: page.id,
-            ruleCode: issue.ruleCode,
-            severity: issue.severity,
-            title: issue.title,
-            url: page.url,
-            evidence: issue.evidence,
-            recommendation: issue.recommendation
-          }))
-        });
-        await prisma.scan.update({
-          where: { id: scanId },
-          data: { issuesFound: { increment: issues.length } }
-        });
+      // Only evaluate SEO rules if we successfully fetched and parsed the HTML page
+      if (page.statusCode && page.statusCode >= 200 && page.statusCode < 300 && page.contentType?.includes('text/html')) {
+        issues = await evaluatePage(page);
+        if (issues.length > 0) {
+          await prisma.issue.createMany({
+            data: issues.map(issue => ({
+              pageId: page.id,
+              ruleCode: issue.ruleCode,
+              severity: issue.severity,
+              title: issue.title,
+              url: page.url,
+              evidence: issue.evidence,
+              recommendation: issue.recommendation
+            }))
+          });
+          await prisma.scan.update({
+            where: { id: scanId },
+            data: { issuesFound: { increment: issues.length } }
+          });
+        }
       }
     }
   }
@@ -44,7 +47,7 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
   
   if (scan) {
     const maxPages = (scan.project.crawlSettings as any)?.maxPages || 100;
-    const isDone = scan.pagesDiscovered > 0 && (
+    const isDone = scan.pagesDiscovered === 0 || (
       scan.pagesCrawled + scan.pagesFailed >= scan.pagesDiscovered ||
       scan.pagesCrawled + scan.pagesFailed >= maxPages
     );
@@ -62,7 +65,11 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
 
          const { rules } = require('../seo/rules');
          const ruleCategoryMap = new Map();
-         for (const r of rules) ruleCategoryMap.set(r.code, r.category);
+         const ruleMap = new Map();
+         for (const r of rules) {
+           ruleCategoryMap.set(r.code, r.category);
+           ruleMap.set(r.code, r);
+         }
 
          for (const page of pages) {
            let pageCrit = 0;
@@ -83,6 +90,10 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
                if (issue.severity === 'WARNING') pageCatScores[catKey as keyof typeof pageCatScores] -= 3;
                if (issue.severity === 'INFO') pageCatScores[catKey as keyof typeof pageCatScores] -= 1;
              }
+             
+             // Optionally assign deterministic priority if not already assigned
+             // But we don't store priority on the Issue model in Prisma.
+             // We will calculate priority on the fly in the API response or when returning data.
            }
            
            const pageScore = Math.max(0, 100 - (pageCrit * 10) - (pageWarn * 3) - (pageInfo * 1));
@@ -94,13 +105,13 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
            }
          }
 
-         const overallScore = pages.length > 0 ? Math.round(totalScore / pages.length) : 100;
-         const technicalScore = catScores.Technical.count > 0 ? Math.round(catScores.Technical.total / catScores.Technical.count) : 100;
-         const contentScore = catScores.Content.count > 0 ? Math.round(catScores.Content.total / catScores.Content.count) : 100;
-         const indexabilityScore = catScores.Indexability.count > 0 ? Math.round(catScores.Indexability.total / catScores.Indexability.count) : 100;
-         const performanceScore = catScores.Performance.count > 0 ? Math.round(catScores.Performance.total / catScores.Performance.count) : 100;
-         const accessibilityScore = catScores.Accessibility.count > 0 ? Math.round(catScores.Accessibility.total / catScores.Accessibility.count) : 100;
-         const structuredDataScore = catScores.StructuredData.count > 0 ? Math.round(catScores.StructuredData.total / catScores.StructuredData.count) : 100;
+         const overallScore = pages.length > 0 ? Math.round(totalScore / pages.length) : 0;
+         const technicalScore = catScores.Technical.count > 0 ? Math.round(catScores.Technical.total / catScores.Technical.count) : 0;
+         const contentScore = catScores.Content.count > 0 ? Math.round(catScores.Content.total / catScores.Content.count) : 0;
+         const indexabilityScore = catScores.Indexability.count > 0 ? Math.round(catScores.Indexability.total / catScores.Indexability.count) : 0;
+         const performanceScore = catScores.Performance.count > 0 ? Math.round(catScores.Performance.total / catScores.Performance.count) : 0;
+         const accessibilityScore = catScores.Accessibility.count > 0 ? Math.round(catScores.Accessibility.total / catScores.Accessibility.count) : 0;
+         const structuredDataScore = catScores.StructuredData.count > 0 ? Math.round(catScores.StructuredData.total / catScores.StructuredData.count) : 0;
 
          const criticals = await prisma.issue.count({ where: { page: { scanId }, severity: 'CRITICAL' } });
          const warnings = await prisma.issue.count({ where: { page: { scanId }, severity: 'WARNING' } });
