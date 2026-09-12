@@ -13,6 +13,11 @@ enum Role {
   CLIENT
 }
 
+enum Tier {
+  FREE
+  PRO
+}
+
 enum ScanStatus {
   PENDING
   RUNNING
@@ -36,6 +41,7 @@ enum IssueStatus {
 model Organization {
   id        String   @id @default(uuid())
   name      String
+  tier      Tier     @default(FREE)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

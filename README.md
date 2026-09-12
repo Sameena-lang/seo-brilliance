@@ -1,5 +1,54 @@
 # SEO Brilliance
 
+SEO Brilliance (or SEO Intelligence) is a professional, premium SaaS AI SEO Website Analyzer.
+
+## System Architecture
+
+The project is divided into a robust Node.js backend and a modern React frontend:
+
+### Frontend
+- **Framework**: React 19 powered by Vite for fast development and building.
+- **Routing**: `@tanstack/react-router` for type-safe routing.
+- **Styling**: Tailwind CSS combined with Radix UI for accessible, unstyled components.
+- **State & Data Fetching**: `@tanstack/react-query` for server state and data fetching via `axios`.
+- **Forms & Validation**: `react-hook-form` coupled with `zod`.
+- **UI Assets**: `lucide-react` for icons and `recharts` for data visualization.
+
+### Backend
+- **Server**: Node.js & Express (TypeScript).
+- **Database**: PostgreSQL managed via Prisma ORM.
+- **Caching & Queues**: Redis & BullMQ for asynchronous background jobs (e.g., website crawling and AI processing).
+- **External APIs**: OpenAI for intelligent SEO recommendations and summaries.
+- **Utilities**: Cheerio for web scraping, PDFKit and json2csv for generating exportable reports.
+
+## Workflow & Local Setup
+
+### 1. Backend Setup
+Navigate to the `backend` directory and set up the required services:
+```bash
+cd backend
+npm install
+cp .env.example .env
+# Start PostgreSQL and Redis containers
+docker-compose up -d db redis
+# Run migrations and seed data
+npx prisma migrate dev
+npm run prisma:seed
+# Start the development server
+npm run dev
+```
+*(Note: You may also need to run `npm run start:worker` to process background jobs like crawling).*
+
+### 2. Frontend Setup
+Navigate to the root directory:
+```bash
+npm install
+npm run dev
+```
+Access the frontend application at `http://localhost:5173`. The frontend is configured to communicate with the backend running on `http://localhost:5000/api/v1`.
+
+---
+
 Create a professional, premium SaaS UI/UX for an AI SEO Website Analyzer called SEO Intelligence.
 
 Build the frontend only. Do not implement backend, database, authentication logic, crawler logic, or APIs yet.

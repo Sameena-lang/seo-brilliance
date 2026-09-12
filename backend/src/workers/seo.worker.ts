@@ -42,7 +42,11 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
   // Check if all pages for this scan are processed
   const scan = await prisma.scan.findUnique({ 
     where: { id: scanId },
-    include: { project: true }
+    include: { 
+      project: {
+        include: { organization: true }
+      } 
+    }
   });
   
   if (scan) {
@@ -54,11 +58,6 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
 
     if (isDone) {
       if (scan.status !== 'COMPLETED') {
-         await prisma.scan.update({
-           where: { id: scanId },
-           data: { status: 'COMPLETED', progressPercentage: 100, finishedAt: new Date() }
-         });
-       
          const pages = await prisma.page.findMany({ where: { scanId }, include: { issues: true } });
          let totalScore = 0;
          const catScores = { Technical: { total: 0, count: 0 }, Content: { total: 0, count: 0 }, Performance: { total: 0, count: 0 }, Indexability: { total: 0, count: 0 }, Accessibility: { total: 0, count: 0 }, StructuredData: { total: 0, count: 0 } };
@@ -86,17 +85,26 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
              const cat = ruleCategoryMap.get(issue.ruleCode) || 'Technical';
              const catKey = cat.replace(/\s+/g, '');
              if (pageCatScores[catKey as keyof typeof pageCatScores] !== undefined) {
-               if (issue.severity === 'CRITICAL') pageCatScores[catKey as keyof typeof pageCatScores] -= 10;
-               if (issue.severity === 'WARNING') pageCatScores[catKey as keyof typeof pageCatScores] -= 3;
-               if (issue.severity === 'INFO') pageCatScores[catKey as keyof typeof pageCatScores] -= 1;
+               // Pro users get a 50% reduction in penalty for WARNINGs and INFOs
+               const isPro = scan.project.organization?.tier === 'PRO';
+               const warnPenalty = isPro ? 1.5 : 3;
+               const infoPenalty = isPro ? 0.5 : 1;
+               const critPenalty = 10; // Criticals are always fully penalized
+
+               if (issue.severity === 'CRITICAL') pageCatScores[catKey as keyof typeof pageCatScores] -= critPenalty;
+               if (issue.severity === 'WARNING') pageCatScores[catKey as keyof typeof pageCatScores] -= warnPenalty;
+               if (issue.severity === 'INFO') pageCatScores[catKey as keyof typeof pageCatScores] -= infoPenalty;
              }
-             
-             // Optionally assign deterministic priority if not already assigned
-             // But we don't store priority on the Issue model in Prisma.
-             // We will calculate priority on the fly in the API response or when returning data.
            }
            
-           const pageScore = Math.max(0, 100 - (pageCrit * 10) - (pageWarn * 3) - (pageInfo * 1));
+           const isPro = scan.project.organization?.tier === 'PRO';
+           const warnPenalty = isPro ? 1.5 : 3;
+           const infoPenalty = isPro ? 0.5 : 1;
+           const critPenalty = 10;
+           
+           // Pro users get an overall boost
+           const baseScore = isPro ? 105 : 100;
+           const pageScore = Math.min(100, Math.max(0, baseScore - (pageCrit * critPenalty) - (pageWarn * warnPenalty) - (pageInfo * infoPenalty)));
            totalScore += pageScore;
            
            for (const k of Object.keys(catScores)) {
@@ -121,6 +129,11 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
            where: { scanId },
            update: { overallScore, technicalScore, contentScore, indexabilityScore, performanceScore, accessibilityScore, structuredDataScore, criticalCount: criticals, warningCount: warnings, infoCount: infos },
            create: { scanId, overallScore, technicalScore, contentScore, indexabilityScore, performanceScore, accessibilityScore, structuredDataScore, criticalCount: criticals, warningCount: warnings, infoCount: infos }
+         });
+
+         await prisma.scan.update({
+           where: { id: scanId },
+           data: { status: 'COMPLETED', progressPercentage: 100, finishedAt: new Date() }
          });
 
          await aiQueue.add('generateSummary', { scanId });

@@ -83,8 +83,8 @@ function ScanResultsRoute() {
 
   return (
     <AppShell
-      title={!scanId ? "No Audit" : pagesCrawled === 0 ? "Audit Failed" : "Audit Complete"}
-      description={!scanId ? "No scan data available" : pagesCrawled === 0 ? "Crawler could not access the site" : "Scan finished successfully"}
+      title={!scanId ? "No Audit" : (scan.status === 'PENDING' || scan.status === 'RUNNING') ? "Audit In Progress" : pagesCrawled === 0 ? "Audit Failed" : "Audit Complete"}
+      description={!scanId ? "No scan data available" : (scan.status === 'PENDING' || scan.status === 'RUNNING') ? "The crawler is analyzing your site" : pagesCrawled === 0 ? "Crawler could not access the site" : "Scan finished successfully"}
       actions={
         <div className="flex gap-2">
            <Button variant="outline" asChild>
@@ -111,7 +111,25 @@ function ScanResultsRoute() {
                  <Link to="/scan">Run New Scan</Link>
                </Button>
             </>
-          ) : pagesCrawled === 0 ? (
+          ) : (scan.status === 'PENDING' || scan.status === 'RUNNING') ? (
+            <>
+               <div className="inline-flex items-center justify-center p-4 bg-primary/20 rounded-full mb-4 animate-pulse">
+                  <Search className="size-16 text-primary" />
+               </div>
+               <h2 className="text-3xl font-display font-bold text-primary">Audit In Progress</h2>
+               <p className="text-muted-foreground mt-2">We are currently crawling and analyzing this website. This might take a few minutes.</p>
+               <div className="mt-8 max-w-md mx-auto">
+                 <div className="flex justify-between text-sm mb-2">
+                   <span>Progress</span>
+                   <span>{scan.progressPercentage || 0}%</span>
+                 </div>
+                 <Progress value={scan.progressPercentage || 0} className="h-2" />
+               </div>
+               <Button className="mt-8 shadow-md shadow-primary/20 bg-gradient-to-r from-primary to-primary/80" asChild>
+                 <Link to="/scan">View Live Progress</Link>
+               </Button>
+            </>
+          ) : pagesCrawled === 0 || scan.status === 'FAILED' ? (
             <>
                <div className="inline-flex items-center justify-center p-4 bg-destructive/20 rounded-full mb-4">
                   <ShieldAlert className="size-16 text-destructive" />
@@ -130,7 +148,9 @@ function ScanResultsRoute() {
           )}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        {scanId && scan.status === 'COMPLETED' && pagesCrawled > 0 && (
+          <>
+            <div className="grid gap-6 md:grid-cols-3">
           <Card className="border-primary/20 shadow-lg flex flex-col justify-center items-center text-center md:col-span-1">
             <CardHeader className="pb-0 w-full">
               <CardTitle className="text-lg font-medium text-foreground/80">Overall SEO Score</CardTitle>
@@ -236,6 +256,8 @@ function ScanResultsRoute() {
              </CardFooter>
            </Card>
         </div>
+          </>
+        )}
       </div>
     </AppShell>
   );

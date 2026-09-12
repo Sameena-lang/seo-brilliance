@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-import { useUserProfile, useUpdateProfile } from "@/hooks/use-api";
+import { useUserProfile, useUpdateProfile, useSubscriptionStatus, useUpgradeSubscription } from "@/hooks/use-api";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsRoute,
@@ -27,7 +27,9 @@ function SettingsRoute() {
 
 function SettingsContent() {
   const { data: profile, isLoading } = useUserProfile();
+  const { data: subscription } = useSubscriptionStatus();
   const updateProfile = useUpdateProfile();
+  const upgradeSubscription = useUpgradeSubscription();
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -126,19 +128,32 @@ function SettingsContent() {
                 </div>
                 
                 <div className="pt-4 border-t border-border">
-                  <h4 className="text-sm font-medium mb-4">Plan Details</h4>
+                  <h4 className="text-sm font-medium mb-4">Subscription Plan</h4>
                   <div className="rounded-lg border border-border p-4 bg-muted/20">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-foreground">Pro Plan</p>
-                        <p className="text-sm text-muted-foreground">18,240 / 25,000 pages used</p>
+                        <p className="font-semibold text-foreground">
+                          {subscription?.tier === 'PRO' ? 'Pro Plan (High Prediction Engine Enabled)' : 'Free Plan (Basic Engine)'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {subscription?.tier === 'PRO' 
+                            ? 'You have unlimited access to deep crawling and advanced AI.' 
+                            : 'Standard performance. Upgrade to unlock deeper crawling and more favorable SEO scoring.'}
+                        </p>
                       </div>
-                      <Button 
-                        variant="outline"
-                        onClick={() => toast("Redirecting to billing portal...")}
-                      >
-                        Upgrade
-                      </Button>
+                      {subscription?.tier !== 'PRO' && (
+                        <Button 
+                          onClick={() => upgradeSubscription.mutate()}
+                          disabled={upgradeSubscription.isPending}
+                        >
+                          {upgradeSubscription.isPending ? "Upgrading..." : "Upgrade to Pro ($49/mo)"}
+                        </Button>
+                      )}
+                      {subscription?.tier === 'PRO' && (
+                        <Button variant="outline" disabled>
+                          Active
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

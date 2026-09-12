@@ -17,7 +17,11 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
 
   const scan = await prisma.scan.findUnique({
     where: { id: scanId },
-    include: { project: true }
+    include: { 
+      project: {
+        include: { organization: true }
+      } 
+    }
   });
 
   if (!scan) return;
@@ -34,6 +38,11 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
     include: { project: true, siteScore: true }
   });
 
+  const isPro = scan.project.organization?.tier === 'PRO';
+  const proInstructions = isPro 
+    ? "As this is a PRO subscriber, provide highly detailed, advanced technical SEO guidance. Prioritize fixes by effort vs impact. Do not hallucinate."
+    : "Keep the recommendations brief and basic. Do not hallucinate.";
+
   const prompt = `
     Analyze the following SEO audit results for ${scan.project.domain}.
     Total pages crawled: ${scan.pagesCrawled}
@@ -41,6 +50,7 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
     Issues Summary: ${JSON.stringify(issues)}
     
     CRITICAL RULE: Base your entire summary strictly and ONLY on the provided Issues data above. Do not hallucinate URLs, issues, measurements, or scores that are not explicitly present in the data. Do NOT use the word "prediction" or "predicted". This is an actual audit result.
+    ${proInstructions}
     
     Return a JSON object with this exact structure:
     {

@@ -2,6 +2,15 @@ import prisma from '../config/db';
 
 export const createProject = async (data: any, userId: string, organizationId: string) => {
   const rootUrl = data.rootUrl || (data.domain.startsWith('http') ? data.domain : `https://${data.domain}`);
+  
+  const existingProject = await prisma.project.findFirst({
+    where: { domain: data.domain, organizationId }
+  });
+
+  if (existingProject) {
+    return existingProject;
+  }
+
   return prisma.project.create({
     data: {
       ...data,

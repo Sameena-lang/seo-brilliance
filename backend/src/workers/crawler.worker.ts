@@ -11,18 +11,33 @@ const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379'
 });
 
 export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
+  console.log(`[Worker] Started job ${job.id} for scan ${job.data.scanId}`);
   const { scanId, projectId, url, settings, currentDepth = 0 } = job.data;
   
-  const scan = await prisma.scan.findUnique({ where: { id: scanId } });
-  if (!scan || scan.status === 'CANCELLED' || scan.status === 'FAILED') {
+  const scan = await prisma.scan.findUnique({ 
+    where: { id: scanId },
+    include: {
+      project: {
+        include: { organization: true }
+      }
+    }
+  });
+  if (!scan) {
+    console.log(`[Worker] Scan ${scanId} not found!`);
+    return;
+  }
+  if (scan.status === 'CANCELLED' || scan.status === 'FAILED') {
+    console.log(`[Worker] Scan ${scanId} aborted (status: ${scan.status})`);
     return; // Stop if scan is aborted
   }
 
+  console.log(`[Worker] Scan ${scanId} found. Depth: ${currentDepth}`);
   if (currentDepth === 0) {
     await prisma.scan.update({
       where: { id: scanId },
       data: { status: 'RUNNING', startedAt: new Date() }
     });
+    console.log(`[Worker] Updated scan ${scanId} to RUNNING`);
   }
 
   // Ensure URL is safe
@@ -46,8 +61,12 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     return;
   }
 
+  const isPro = scan.project?.organization?.tier === 'PRO';
+  const defaultMaxDepth = isPro ? 6 : 3;
+  const maxDepth = settings?.maxDepth || defaultMaxDepth;
+
   // Check max depth
-  if (currentDepth > (settings?.maxDepth || 3)) {
+  if (currentDepth > maxDepth) {
     await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
     await seoQueue.add('analyzeSeo', { scanId });
     return;
@@ -65,7 +84,8 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
   }
 
   // Use Redis atomic increment to guarantee strict limits under concurrency
-  const maxPages = settings?.maxPages || 100;
+  const defaultMaxPages = isPro ? 500 : 100;
+  const maxPages = settings?.maxPages || defaultMaxPages;
   const reserveKey = `scan:${scanId}:reserved`;
   const reservedCount = await connection.incr(reserveKey);
   
@@ -234,4 +254,7 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
 
 crawlerWorker.on('failed', (job, err) => {
   console.error(`Crawl job ${job?.id} failed:`, err);
+});
+crawlerWorker.on('completed', (job) => {
+  console.log(`Crawl job ${job?.id} completed successfully`);
 });

@@ -73,7 +73,7 @@ function Index() {
             </div>
             
             {/* Conditional Result or Dashboard Preview */}
-            {result ? (
+            {result && (
               <div className="mt-16 flow-root sm:mt-24 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
                 <Card className="border-border shadow-2xl relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent"></div>
@@ -111,21 +111,6 @@ function Index() {
                     </div>
                   </CardContent>
                 </Card>
-              </div>
-            ) : (
-              <div className="mt-16 flow-root sm:mt-24">
-                <div className="-m-2 rounded-xl bg-muted/50 p-2 ring-1 ring-inset ring-foreground/10 lg:-m-4 lg:rounded-2xl lg:p-4">
-                  <div className="rounded-md bg-background shadow-2xl ring-1 ring-foreground/10 flex items-center justify-center aspect-[16/9] overflow-hidden relative">
-                     <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-primary/5"></div>
-                     <div className="text-center space-y-4 relative z-10">
-                        <div className="inline-flex items-center justify-center p-4 bg-primary/10 rounded-full mb-4">
-                          <BarChart className="size-12 text-primary" />
-                        </div>
-                        <h3 className="text-2xl font-bold">SEO Score: 92/100</h3>
-                        <p className="text-muted-foreground max-w-sm mx-auto">Your website is performing well, but there are 3 critical issues affecting your mobile rankings.</p>
-                     </div>
-                  </div>
-                </div>
               </div>
             )}
           </div>

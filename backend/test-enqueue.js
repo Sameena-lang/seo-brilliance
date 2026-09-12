@@ -1,11 +1,17 @@
 const { Queue } = require('bullmq');
 const IORedis = require('ioredis');
 
+const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
+const crawlQueue = new Queue('crawlQueue', { connection });
+
 async function test() {
-  const connection = new IORedis('redis://localhost:6379');
-  const queue = new Queue('reportQueue', { connection });
-  await queue.add('generateReport', { scanId: '36c7ab5f-2339-48c1-850f-31b45a95bd95' });
-  console.log('Job enqueued');
+  console.log("Adding job...");
+  const job = await crawlQueue.add('startCrawl', { 
+    scanId: "c03aeb62-bee0-419b-bb8c-90160faa10c3", 
+    projectId: "something", 
+    url: "https://www.mmahal.com" 
+  });
+  console.log("Job added:", job.id);
   process.exit(0);
 }
 test();

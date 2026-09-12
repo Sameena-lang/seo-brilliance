@@ -1,0 +1,4 @@
+"ruleCode","severity","title","url","status"
+"H1_MISSING","WARNING","H1 tag is missing","https://www.mmahal.com","OPEN"
+"HEADING_STRUCTURE","INFO","Poor heading structure","https://www.mmahal.com","OPEN"
+"CANONICAL_MISSING","INFO","Canonical URL is missing","https://www.mmahal.com","OPEN"

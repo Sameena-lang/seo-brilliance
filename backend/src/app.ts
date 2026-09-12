@@ -49,6 +49,7 @@ import pageRoutes from './routes/page.routes';
 import issueRoutes from './routes/issue.routes';
 import reportRoutes from './routes/report.routes';
 import publicRoutes from './routes/public.routes';
+import subscriptionRoutes from './routes/subscription.routes';
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
@@ -61,6 +62,7 @@ app.use('/api/v1/pages', pageRoutes);
 app.use('/api/v1/issues', issueRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/public', publicRoutes);
+app.use('/api/v1/subscription', subscriptionRoutes);
 
 import prisma from './config/db';
 import { redisConnection } from './queues/index';

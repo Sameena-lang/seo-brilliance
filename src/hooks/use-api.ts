@@ -163,3 +163,24 @@ export const useUpdateProfile = () => {
     onError: (err: any) => toast.error(err?.message ?? 'Failed to update profile'),
   });
 };
+
+// ─── Subscription ─────────────────────────────────────────────────────────────
+
+export const useSubscriptionStatus = () => {
+  return useQuery({
+    queryKey: ['subscription', 'status'],
+    queryFn: () => api.get('/subscription/status').then((res: any) => res.data),
+  });
+};
+
+export const useUpgradeSubscription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post('/subscription/upgrade', {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['subscription', 'status'] });
+      toast.success('Successfully upgraded to PRO tier! High Prediction engine enabled.');
+    },
+    onError: (err: any) => toast.error(err?.message ?? 'Failed to upgrade subscription'),
+  });
+};

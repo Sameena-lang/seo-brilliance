@@ -44,12 +44,30 @@ export const getAllIssues = async (req: Request, res: Response, next: NextFuncti
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const where: any = { page: { scan: { project: { organizationId: orgId } } } };
-    if (projectId) where.page.scan.project.id = String(projectId);
+    // First, find the latest COMPLETED scan for each project in this org
+    const projects = await prisma.project.findMany({
+      where: { organizationId: orgId, ...(projectId ? { id: String(projectId) } : {}) },
+      select: {
+        id: true,
+        scans: {
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { id: true }
+        }
+      }
+    });
+
+    const latestScanIds = projects
+      .map(p => p.scans[0]?.id)
+      .filter(Boolean) as string[];
+
+    const where: any = { 
+      page: { scanId: { in: latestScanIds } }
+    };
+    
     if (severity) where.severity = String(severity);
     if (status) where.status = String(status);
-    
-    require('fs').appendFileSync('debug-issues.log', JSON.stringify({time: new Date(), where, projectId, url: req.originalUrl}) + '\\n');
 
     const issues = await prisma.issue.findMany({
       where,
