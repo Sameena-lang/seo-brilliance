@@ -30,8 +30,8 @@ function Index() {
     
     try {
       const res = await analyzeMutation.mutateAsync(target);
-      if (res && res.success) {
-        setResult(res.data);
+      if (res) {
+        setResult(res);
       }
     } catch (err) {
       console.error(err);
