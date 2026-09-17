@@ -11,6 +11,7 @@ import {
   Search,
   Settings,
   TriangleAlert,
+  Bot
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "@/components/brand";
@@ -31,6 +32,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useProjects } from "@/hooks/use-api";
 import { useAuth } from "@/hooks/use-auth";
+import { AiChatAssistant } from "./ai-chat-assistant";
+import { useActiveProject } from "@/hooks/use-active-project";
+import { useLatestScan } from "@/hooks/use-latest-scan";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -45,6 +49,15 @@ const nav = [
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { activeProject } = useActiveProject();
+  const { data: latestScan } = useLatestScan(activeProject?.id || null);
+  
+  const openChat = () => {
+    // Pass the latest scan context if available
+    window.dispatchEvent(new CustomEvent('open-ai-chat', { 
+      detail: { scanId: latestScan?.id } 
+    }));
+  };
 
   return (
     <nav className="flex flex-col gap-1" aria-label="Main">
@@ -72,6 +85,17 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
         );
       })}
+      
+      <div className="mt-4 px-3">
+        <Button 
+          variant="secondary" 
+          className="w-full justify-start gap-3 bg-primary/10 text-primary hover:bg-primary/20 shadow-sm"
+          onClick={openChat}
+        >
+          <Bot className="size-4" />
+          AI Assistant
+        </Button>
+      </div>
     </nav>
   );
 }
@@ -88,6 +112,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const { user, logout } = useAuth();
+  const router = useRouter();
   
   // Clean empty state for notifications since backend doesn't support it yet
   const unread = 0;
@@ -131,9 +156,20 @@ export function AppShell({
 
             <ProjectSelector />
 
-            <form className="relative ml-auto hidden max-w-xs flex-1 md:block" onSubmit={(e) => e.preventDefault()}>
+            <form 
+              className="relative ml-auto hidden max-w-xs flex-1 md:block" 
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const input = form.elements.namedItem("search") as HTMLInputElement;
+                if (input.value) {
+                  router.navigate({ to: "/pages", search: { search: input.value } });
+                }
+              }}
+            >
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                name="search"
                 type="search"
                 placeholder="Search pages, issues, domains…"
                 aria-label="Search"
@@ -225,11 +261,12 @@ export function AppShell({
           {children}
         </main>
       </div>
+      <AiChatAssistant />
     </div>
   );
 }
 
-import { useActiveProject } from "@/hooks/use-active-project";
+// useActiveProject already imported above
 import { useNavigate, useRouter } from "@tanstack/react-router";
 
 function ProjectSelector() {

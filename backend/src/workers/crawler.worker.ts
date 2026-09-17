@@ -218,7 +218,13 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     await seoQueue.add('analyzeSeo', { scanId, pageId: page.id });
 
     // Queue internal links
+    const rootUrlStr = scan.project?.rootUrl || normUrl;
+    const includeSubdomains = settings?.includeSubdomains === true;
+
     for (const link of extracted.internalLinks) {
+       if (!isAllowedDomain(link, rootUrlStr, includeSubdomains)) {
+         continue;
+       }
        // Fire and forget - add to crawl queue directly
        import('../queues').then(q => {
           q.crawlQueue.add('startCrawl', { 

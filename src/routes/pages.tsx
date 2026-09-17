@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Download, Filter, Search } from "lucide-react";
+import { Download, Filter, Search, Bot } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useLatestScan } from "@/hooks/use-latest-scan";
@@ -27,7 +27,13 @@ function PagesRoute() {
   const { data: latestScan } = useLatestScan(activeProjectId);
   const scanId = searchParams?.scanId || latestScan?.id;
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(searchParams?.search || "");
+  
+  React.useEffect(() => {
+    if (searchParams?.search !== undefined && searchParams?.search !== searchTerm) {
+      setSearchTerm(searchParams.search);
+    }
+  }, [searchParams?.search]);
   const debouncedSearch = useDebounce(searchTerm, 500);
   
   const [statusFilter, setStatusFilter] = useState("all");
@@ -189,7 +195,7 @@ function PagesRoute() {
                   <th className="px-4 py-3 font-medium hidden sm:table-cell">Indexable</th>
                   <th className="px-4 py-3 font-medium hidden md:table-cell">Title</th>
                   <th className="px-4 py-3 font-medium hidden lg:table-cell">H1</th>
-                  <th className="px-4 py-3 font-medium text-right">Issues</th>
+                  <th className="px-4 py-3 font-medium text-right">Issues & AI</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border text-foreground">
@@ -241,11 +247,24 @@ function PagesRoute() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {page._count?.issues > 0 ? (
-                        <span className="text-destructive font-medium">{page._count.issues}</span>
-                      ) : (
-                        <span className="text-muted-foreground">0</span>
-                      )}
+                      <div className="flex items-center justify-end gap-3">
+                        {page._count?.issues > 0 ? (
+                          <span className="text-destructive font-medium">{page._count.issues}</span>
+                        ) : (
+                          <span className="text-muted-foreground">0</span>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="size-7 text-primary hover:bg-primary/10"
+                          onClick={() => window.dispatchEvent(new CustomEvent('open-ai-chat', { 
+                            detail: { scanId: page.scanId, pageId: page.id, initialMessage: "Tell me about this page and how to improve it." } 
+                          }))}
+                          title="Ask AI about this page"
+                        >
+                          <Bot className="size-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

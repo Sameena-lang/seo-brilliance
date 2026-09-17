@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Download, FileBarChart, FilePieChart, FileText, Settings as SettingsIcon, Clock, FileType } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
+import { VoicePlayer } from "@/components/voice-player";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useReports, useGenerateReport, useDashboardRecentScans } from "@/hooks/use-api";
@@ -246,7 +247,7 @@ function ReportsRoute() {
                 </table>
              </div>
           </CardContent>
-          <CardFooter>
+           <CardFooter className="flex items-center gap-4">
              <Button 
                variant="outline"
                onClick={handleGenerate}
@@ -254,7 +255,11 @@ function ReportsRoute() {
              >
                Generate New Report
              </Button>
-          </CardFooter>
+             
+             {reports.length > 0 && reports[0].scanId && (
+               <VoicePlayer scanId={reports[0].scanId} label="Listen to Latest Report Summary" />
+             )}
+           </CardFooter>
         </Card>
       </div>
     </AppShell>

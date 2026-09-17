@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, ChevronRight, FileText, Globe, Search, ShieldAlert, ShieldCheck, BarChart2, PieChart as PieChartIcon } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronRight, FileText, Globe, Search, ShieldAlert, ShieldCheck, BarChart2, PieChart as PieChartIcon, Bot } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { VoicePlayer } from "@/components/voice-player";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -144,6 +145,21 @@ function ScanResultsRoute() {
                </div>
                <h2 className="text-3xl font-display font-bold">Audit Completed Successfully</h2>
                <p className="text-muted-foreground mt-2">We crawled {pagesCrawled.toLocaleString()} pages and found {issuesFound.toLocaleString()} issues.</p>
+               
+               <div className="mt-8 flex flex-col items-center gap-3">
+                 <p className="text-sm font-medium text-muted-foreground">Want to understand your results?</p>
+                 <div className="flex items-center gap-3">
+                   <Button 
+                     variant="default" 
+                     className="gap-2 shadow-md"
+                     onClick={() => window.dispatchEvent(new CustomEvent('open-ai-chat', { detail: { scanId } }))}
+                   >
+                     <Bot className="size-4" />
+                     Ask AI
+                   </Button>
+                   <VoicePlayer scanId={scanId} label="Listen to Results" />
+                 </div>
+               </div>
             </>
           )}
         </div>

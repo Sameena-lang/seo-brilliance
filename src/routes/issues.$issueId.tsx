@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Bot, Check, ChevronDown, FileCode2, ExternalLink, Sparkles, Terminal, BookOpen, Lightbulb, Code } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { VoicePlayer } from "@/components/voice-player";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,17 @@ function IssueDetailsRoute() {
       description={`Found on ${issue.page?.url || 'a page'}`}
       actions={
         <div className="flex gap-2">
+          <Button 
+            variant="default" 
+            className="gap-2 shadow-sm"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-ai-chat', { 
+              detail: { scanId: issue.page?.scanId, issueId: issue.id, initialMessage: "Explain this issue in simple language and tell me how to fix it." } 
+            }))}
+          >
+            <Bot className="size-4" />
+            Ask AI
+          </Button>
+          <VoicePlayer scanId={issue.page?.scanId} issueId={issue.id} label="Listen" />
           <Button variant="outline" className="gap-2" onClick={() => navigate({ to: '/issues' })}>
             <ArrowLeft className="size-4" />
             All Issues

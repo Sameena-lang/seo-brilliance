@@ -1,5 +1,5 @@
 import { rules, evaluatePage } from '../src/seo/rules';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
@@ -58,7 +58,7 @@ async function validateScoring() {
 
 async function validateAI() {
   console.log("\n=== TASK 4 & 5: AI VALIDATION & GROUNDING ===");
-  const openai = new OpenAI({ apiKey: process.env.AI_API_KEY || 'fake-key' });
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'fake-key');
   
   const prompt = `
     Analyze the following SEO scan results for test.com and provide an executive summary.
@@ -76,14 +76,14 @@ async function validateAI() {
     }
   `;
 
-  if (process.env.AI_API_KEY) {
+  if (process.env.GEMINI_API_KEY) {
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' }
+      const model = genAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+        generationConfig: { responseMimeType: 'application/json' }
       });
-      console.log("AI Response: ", response.choices[0].message.content);
+      const response = await model.generateContent(prompt);
+      console.log("AI Response: ", response.response.text());
       console.log("REAL AI TEST = PASS");
     } catch (e: any) {
       console.log("REAL AI TEST = FAILED: ", e.message);

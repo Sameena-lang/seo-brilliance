@@ -23,7 +23,11 @@ export const isAllowedDomain = (urlStr: string, rootUrlStr: string, includeSubdo
     if (includeSubdomains) {
       return url.hostname.endsWith(rootUrl.hostname);
     }
-    return url.hostname === rootUrl.hostname;
+    // Exact match mode: check exact equality of pathname
+    if (url.hostname !== rootUrl.hostname) return false;
+    const normUrlPath = url.pathname.replace(/\/$/, '') || '/';
+    const normRootPath = rootUrl.pathname.replace(/\/$/, '') || '/';
+    return normUrlPath === normRootPath;
   } catch (error) {
     return false;
   }

@@ -11,6 +11,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useActiveProject } from "@/hooks/use-active-project";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/scan/")({
   component: ScanRoute,
@@ -25,6 +26,7 @@ function ScanRoute() {
   const { activeProjectId, setProject } = useActiveProject();
   
   const [isNewProject, setIsNewProject] = useState(false);
+  const queryClient = useQueryClient();
   
   // Explicitly passed projectId from search params overrides active, unless user clicked New Domain
   const projectId = isNewProject ? null : (search?.projectId || activeProjectId);
@@ -37,6 +39,9 @@ function ScanRoute() {
 
   const createProjectMutation = useMutation({
     mutationFn: (data: any) => api.post(`/projects`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
   });
 
   const updateProjectMutation = useMutation({

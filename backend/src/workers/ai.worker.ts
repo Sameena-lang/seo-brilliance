@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import prisma from '../config/db';
 import { reportQueue } from '../queues';
 
@@ -8,9 +8,6 @@ const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379'
   maxRetriesPerRequest: null,
 });
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_API_KEY || 'fake-key', // Will fail if not set in prod, but safe for startup
-});
 
 export const aiWorker = new Worker('aiQueue', async (job: Job) => {
   const { scanId } = job.data;
@@ -62,15 +59,17 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
   `;
 
   try {
-    // If we have a real key, call OpenAI
-    if (process.env.AI_API_KEY) {
-      const response = await openai.chat.completions.create({
-        model: process.env.AI_MODEL || 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' }
+    // If we have a real key, call Gemini
+    if (process.env.GEMINI_API_KEY) {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+        generationConfig: { responseMimeType: "application/json" }
       });
-
-      const content = response.choices[0].message.content;
+      
+      const response = await model.generateContent(prompt);
+      const content = response.response.text();
+      
       if (content) {
         const parsed = JSON.parse(content);
         
@@ -81,7 +80,7 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
         });
       }
     } else {
-      throw new Error('No AI_API_KEY provided');
+      throw new Error('No GEMINI_API_KEY provided');
     }
   } catch (error: any) {
     console.error('AI Summary generation failed:', error.message || error);
@@ -89,14 +88,14 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
     await prisma.aiSummary.upsert({
       where: { scanId },
       update: {
-        summary: "This is a placeholder summary. AI generation failed or was not configured.",
+        summary: "[FALLBACK RESPONSE] This is a placeholder summary. AI generation failed or was not configured.",
         whyItMatters: "SEO issues affect ranking and user experience.",
         recommendation: "Fix critical issues identified in the audit.",
         priority: "HIGH"
       },
       create: {
         scanId,
-        summary: "This is a placeholder summary. AI generation failed or was not configured.",
+        summary: "[FALLBACK RESPONSE] This is a placeholder summary. AI generation failed or was not configured.",
         whyItMatters: "SEO issues affect ranking and user experience.",
         recommendation: "Fix critical issues identified in the audit.",
         priority: "HIGH"
