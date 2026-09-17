@@ -79,7 +79,7 @@ async function validateAI() {
   if (process.env.GEMINI_API_KEY) {
     try {
       const model = genAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+        model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
         generationConfig: { responseMimeType: 'application/json' }
       });
       const response = await model.generateContent(prompt);

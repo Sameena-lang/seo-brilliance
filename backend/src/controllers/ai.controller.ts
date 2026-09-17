@@ -101,7 +101,7 @@ ${contextString}
     try {
       const genAI = getGenAI();
       const model = genAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+        model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
         systemInstruction: systemPrompt,
       });
 

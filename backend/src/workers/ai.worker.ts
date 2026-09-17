@@ -63,7 +63,7 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
     if (process.env.GEMINI_API_KEY) {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+        model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
         generationConfig: { responseMimeType: "application/json" }
       });
       
