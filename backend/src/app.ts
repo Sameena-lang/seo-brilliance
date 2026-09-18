@@ -4,6 +4,9 @@ import helmet from 'helmet';
 
 const app: Express = express();
 
+// Enable trust proxy for Render / reverse proxies (fixes rate limiting IP detection)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
@@ -11,35 +14,68 @@ import rateLimit from 'express-rate-limit';
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  'https://zany-space-trout-69j9jw65pq4724jjp-5173.app.github.dev',
   'https://seo-brilliance.vercel.app',
+  'https://zany-space-trout-69j9jw65pq4724jjp-5173.app.github.dev',
   'http://localhost:5173',
+  'http://localhost:3000',
   'http://localhost:8080',
   'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
   'http://127.0.0.1:8080',
-].filter(Boolean);
+].filter(Boolean) as string[];
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || /^https?:\/\/localhost:\d+$/.test(origin)) {
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+      /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
+      /^https:\/\/[a-zA-Z0-9-]+(-[a-zA-Z0-9]+)*\.vercel\.app$/.test(origin)
+    ) {
       return callback(null, true);
     }
 
-    return callback(new Error('Not allowed by CORS'));
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
 }));
 
+// Generous general API rate limiter to prevent 429 errors during dashboard usage and scans
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  max: 2000, // 2000 requests per 15 minutes per IP
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests from this IP, please try again after 15 minutes' } }
+  skip: (req) => req.method === 'OPTIONS',
+  message: {
+    success: false,
+    error: {
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Too many requests from this IP, please try again after a short while.',
+    },
+  },
 });
 
-// Apply rate limiter to all API routes
+// Dedicated rate limiter for auth routes to protect against brute force while avoiding false 429s
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60, // 60 attempts per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+  message: {
+    success: false,
+    error: {
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Too many authentication attempts, please try again in a few minutes.',
+    },
+  },
+});
+
+// Apply rate limiters
 app.use('/api/', apiLimiter);
+app.use('/api/v1/auth', authLimiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

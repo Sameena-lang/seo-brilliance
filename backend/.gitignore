@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs
+logs/
+*.log
+
+# Redis / Dump
+*.rdb
+dump.rdb
+
+# Generated storage files
+storage/*
+!storage/.gitkeep
+
+# System & Editor
+.DS_Store
+*.tsbuildinfo
