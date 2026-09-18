@@ -26,7 +26,7 @@ export const createScan = async (projectId: string, organizationId: string) => {
     },
   });
 
-  // Add to BullMQ crawl queue
+  // Start the in-process crawl pipeline.
   await crawlQueue.add('startCrawl', { scanId: scan.id, projectId: project.id, url: project.rootUrl, settings: project.crawlSettings });
 
   return scan;

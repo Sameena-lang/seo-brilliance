@@ -1,13 +1,7 @@
-import { Worker, Job } from 'bullmq';
-import IORedis from 'ioredis';
+import { Worker, Job } from '../queues';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import prisma from '../config/db';
 import { reportQueue } from '../queues';
-
-const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: null,
-});
-
 
 export const aiWorker = new Worker('aiQueue', async (job: Job) => {
   const { scanId } = job.data;
@@ -105,7 +99,7 @@ export const aiWorker = new Worker('aiQueue', async (job: Job) => {
     // Queue Report Generation
     await reportQueue.add('generateReport', { scanId });
   }
-}, { connection, concurrency: 2 });
+});
 
 aiWorker.on('failed', (job, err) => {
   console.error(`AI job ${job?.id} failed:`, err);

@@ -1,14 +1,9 @@
-import { Worker, Job } from 'bullmq';
-import IORedis from 'ioredis';
+import { Worker, Job } from '../queues';
 import axios from 'axios';
 import prisma from '../config/db';
 import { seoQueue } from '../queues';
 import { normalizeUrl, isAllowedDomain, isSafeUrl } from '../crawler/utils';
 import { extractPageData } from '../crawler/parser';
-
-const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: null,
-});
 
 export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
   console.log(`[Worker] Started job ${job.id} for scan ${job.data.scanId}`);
@@ -83,20 +78,11 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     return;
   }
 
-  // Use Redis atomic increment to guarantee strict limits under concurrency
   const defaultMaxPages = isPro ? 500 : 100;
   const maxPages = settings?.maxPages || defaultMaxPages;
-  const reserveKey = `scan:${scanId}:reserved`;
-  const reservedCount = await connection.incr(reserveKey);
-  
-  if (reservedCount === 1) {
-    // Ensure the key expires to avoid memory leaks
-    await connection.expire(reserveKey, 24 * 3600);
-  }
+  const reservedCount = await prisma.page.count({ where: { scanId } });
 
   if (reservedCount > maxPages) {
-    // Limit exceeded, give the slot back and abort
-    await connection.decr(reserveKey);
     await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
     await seoQueue.add('analyzeSeo', { scanId });
     return;
@@ -256,7 +242,7 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
 
     await seoQueue.add('analyzeSeo', { scanId });
   }
-}, { connection, concurrency: 5 });
+});
 
 crawlerWorker.on('failed', (job, err) => {
   console.error(`Crawl job ${job?.id} failed:`, err);

@@ -17,7 +17,7 @@ The project is divided into a robust Node.js backend and a modern React frontend
 ### Backend
 - **Server**: Node.js & Express (TypeScript).
 - **Database**: PostgreSQL managed via Prisma ORM.
-- **Caching & Queues**: Redis & BullMQ for asynchronous background jobs (e.g., website crawling and AI processing).
+- **Background jobs**: In-process worker pipeline for website crawling and AI processing.
 - **External APIs**: OpenAI for intelligent SEO recommendations and summaries.
 - **Utilities**: Cheerio for web scraping, PDFKit and json2csv for generating exportable reports.
 
@@ -29,23 +29,35 @@ Navigate to the `backend` directory and set up the required services:
 cd backend
 npm install
 cp .env.example .env
-# Start PostgreSQL and Redis containers
-docker-compose up -d db redis
+# Start PostgreSQL
+docker-compose up -d db
 # Run migrations and seed data
 npx prisma migrate dev
 npm run prisma:seed
 # Start the development server
 npm run dev
 ```
-*(Note: You may also need to run `npm run start:worker` to process background jobs like crawling).*
+Background jobs run inside the API process; a separate worker service is not required.
+
+For Render, set the backend service build command to:
+```bash
+npm run render:build
+```
+This explicitly installs the TypeScript compiler and declaration packages required
+to build the production server.
 
 From the repository root, the Prisma and backend commands can also be run through
 the root scripts:
 ```bash
 npm run backend:install
 npm run backend:prisma:generate
-npm run backend:prisma:migrate
+npm run backend:prisma:deploy
 npm run backend:build
+```
+
+The root deployment build command is also available:
+```bash
+npm run render:build
 ```
 
 ### 2. Frontend Setup

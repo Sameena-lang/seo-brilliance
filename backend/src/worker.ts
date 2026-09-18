@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import './workers'; // This initializes the BullMQ workers
+import './workers';
 import prisma from './config/db';
 import { crawlerWorker } from './workers/crawler.worker';
 // Import other workers if necessary, e.g., seoWorker or reportWorker
@@ -11,7 +11,7 @@ console.log(`Worker process started in ${process.env.NODE_ENV} mode.`);
 
 // Graceful shutdown handling
 const shutdown = async (signal: string) => {
-    console.log(`\n${signal} received. Shutting down BullMQ workers gracefully...`);
+    console.log(`\n${signal} received. Shutting down workers gracefully...`);
     
     try {
         // Assuming crawlerWorker is exported from crawler.worker.ts

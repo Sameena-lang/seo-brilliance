@@ -1,15 +1,10 @@
-import { Worker, Job } from 'bullmq';
-import IORedis from 'ioredis';
+import { Worker, Job } from '../queues';
 import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import { Parser } from 'json2csv';
 import prisma from '../config/db';
 import { getScan } from '../services/scan.service';
-
-const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: null,
-});
 
 const STORAGE_PATH = process.env.STORAGE_PATH || './storage';
 
@@ -227,7 +222,7 @@ export const reportWorker = new Worker('reportQueue', async (job: Job) => {
     }
   });
 
-}, { connection, concurrency: 2 });
+});
 
 reportWorker.on('failed', (job, err) => {
   console.error(`Report job ${job?.id} failed:`, err);

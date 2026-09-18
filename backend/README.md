@@ -5,7 +5,7 @@ This is the production-ready Node.js backend for SEO Intelligence.
 ## Stack
 - Node.js & Express (TypeScript)
 - PostgreSQL (Prisma ORM)
-- Redis & BullMQ (Background Jobs)
+- In-process background jobs
 - OpenAI API (AI Summaries)
 - PDFKit & json2csv (Reporting)
 
@@ -20,9 +20,9 @@ This is the production-ready Node.js backend for SEO Intelligence.
    cp .env.example .env
    ```
 
-2. Start the database and Redis:
+2. Start the database:
    ```bash
-   docker-compose up -d db redis
+   docker-compose up -d db
    ```
 
 3. Install dependencies:

@@ -69,16 +69,13 @@ app.use('/api/v1/subscription', subscriptionRoutes);
 app.use('/api/v1/ai', aiRoutes);
 
 import prisma from './config/db';
-import { redisConnection } from './queues/index';
+import './workers';
 
 // Health check route
 app.get('/health', async (req: Request, res: Response) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    const redisPing = await redisConnection.ping();
-    if (redisPing !== 'PONG') throw new Error('Redis ping failed');
-
-    res.status(200).json({ success: true, message: 'Server is running, Database and Redis are healthy.' });
+    res.status(200).json({ success: true, message: 'Server is running and the database is healthy.' });
   } catch (error) {
     res.status(503).json({ success: false, message: 'Service Unavailable' });
   }

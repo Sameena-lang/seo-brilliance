@@ -1,12 +1,7 @@
-import { Worker, Job } from 'bullmq';
-import IORedis from 'ioredis';
+import { Worker, Job } from '../queues';
 import prisma from '../config/db';
 import { evaluatePage } from '../seo/rules';
 import { aiQueue } from '../queues';
-
-const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: null,
-});
 
 export const seoWorker = new Worker('seoQueue', async (job: Job) => {
   const { scanId, pageId } = job.data;
@@ -150,7 +145,7 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
     }
   }
 
-}, { connection, concurrency: 5 });
+});
 
 seoWorker.on('failed', (job, err) => {
   console.error(`SEO job ${job?.id} failed:`, err);
