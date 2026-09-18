@@ -18,6 +18,7 @@ Create a secure `.env` file in your backend deployment environment. See `backend
 Crucially, ensure:
 - `NODE_ENV=production`
 - `JWT_SECRET` is a long, cryptographically secure random string.
+- `FRONTEND_URL` is the exact URL of the deployed frontend.
 
 For the frontend, set the environment variable during your build step:
 - `VITE_API_URL=https://api.your-production-domain.com/api/v1`

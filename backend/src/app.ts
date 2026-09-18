@@ -1,4 +1,5 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
 
 const app: Express = express();
@@ -7,6 +8,27 @@ const app: Express = express();
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
 import rateLimit from 'express-rate-limit';
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://zany-space-trout-69j9jw65pq4724jjp-5173.app.github.dev',
+  'https://seo-brilliance.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:8080',
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || /^https?:\/\/localhost:\d+$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
