@@ -9,7 +9,12 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "backend:install": "npm --prefix backend install",
+    "backend:prisma:generate": "npm --prefix backend run prisma:generate",
+    "backend:prisma:migrate": "npm --prefix backend run prisma:migrate",
+    "backend:build": "npm --prefix backend run build",
+    "backend:start": "npm --prefix backend run start"
   },
   "overrides": {
     "rolldown": "1.2.1"

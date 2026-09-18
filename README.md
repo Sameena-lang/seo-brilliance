@@ -39,6 +39,15 @@ npm run dev
 ```
 *(Note: You may also need to run `npm run start:worker` to process background jobs like crawling).*
 
+From the repository root, the Prisma and backend commands can also be run through
+the root scripts:
+```bash
+npm run backend:install
+npm run backend:prisma:generate
+npm run backend:prisma:migrate
+npm run backend:build
+```
+
 ### 2. Frontend Setup
 Navigate to the root directory:
 ```bash
