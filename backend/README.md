@@ -47,8 +47,6 @@ Ensure your frontend `.env` contains:
 VITE_API_URL=https://seo-brilliance-api.onrender.com/api/v1
 ```
 
-The backend allows CORS from `http://localhost:5173`.
-
 ## API Documentation
 The API provides the following core endpoints:
 - `POST /api/v1/auth/login`

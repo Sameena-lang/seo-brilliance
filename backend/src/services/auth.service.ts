@@ -6,7 +6,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export const registerUser = async (data: any) => {
-  const { fullName, email, password, organizationName } = data;
+  const { fullName, password, organizationName } = data;
+  const email = data.email.trim().toLowerCase();
 
   // Check if user exists
   const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -58,7 +59,8 @@ export const registerUser = async (data: any) => {
 };
 
 export const loginUser = async (data: any) => {
-  const { email, password } = data;
+  const { password } = data;
+  const email = data.email.trim().toLowerCase();
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
