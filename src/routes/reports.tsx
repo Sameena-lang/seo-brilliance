@@ -38,7 +38,7 @@ function ReportsRoute() {
     // Let's do the fetch blob approach:
     const token = localStorage.getItem('token');
     toast.promise(
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/reports/${report.id}/download?type=${type}`, {
+      fetch(`${import.meta.env.VITE_API_URL || 'https://seo-brilliance-api.onrender.com/api/v1'}/reports/${report.id}/download?type=${type}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000/api/v1';
+const API_BASE = 'https://seo-brilliance-api.onrender.com/api/v1';
 const TEST_URL = 'https://books.toscrape.com';
 const TEST_DOMAIN = 'books.toscrape.com';
 

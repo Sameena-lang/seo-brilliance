@@ -1,7 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 
-const API_URL = 'http://localhost:5000/api/v1';
+const API_URL = 'https://seo-brilliance-api.onrender.com/api/v1';
 let token = '';
 let organizationId = '';
 let projectId = '';

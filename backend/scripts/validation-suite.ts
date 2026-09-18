@@ -1,7 +1,7 @@
 import axios from 'axios';
 import assert from 'assert';
 
-const API_BASE = 'http://localhost:5000/api/v1';
+const API_BASE = 'https://seo-brilliance-api.onrender.com/api/v1';
 const TEST_URL = 'http://localhost:5001';
 
 async function wait(ms: number) {

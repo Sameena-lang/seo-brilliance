@@ -2,7 +2,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
-const API_URL = 'http://localhost:5000/api/v1';
+const API_URL = 'https://seo-brilliance-api.onrender.com/api/v1';
 const HEALTH_URL = 'http://localhost:5000/health';
 const TEST_EMAIL = `test_e2e_${Date.now()}@seointelligence.local`;
 const TEST_PASSWORD = 'password123';

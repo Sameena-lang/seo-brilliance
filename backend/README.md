@@ -44,7 +44,7 @@ This is the production-ready Node.js backend for SEO Intelligence.
 ## Using with Frontend
 Ensure your frontend `.env` contains:
 ```env
-VITE_API_URL=http://localhost:5000/api/v1
+VITE_API_URL=https://seo-brilliance-api.onrender.com/api/v1
 ```
 
 The backend allows CORS from `http://localhost:5173`.

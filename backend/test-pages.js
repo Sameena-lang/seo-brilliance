@@ -3,7 +3,7 @@ const axios = require('axios');
 async function test() {
   try {
     // First login to get a token
-    const loginRes = await axios.post('http://localhost:5000/api/v1/auth/login', {
+    const loginRes = await axios.post('https://seo-brilliance-api.onrender.com/api/v1/auth/login', {
       email: 'demo@example.com',
       password: 'password123'
     });
@@ -12,7 +12,7 @@ async function test() {
     console.log("Logged in");
 
     // Fetch /pages
-    const pagesRes = await axios.get('http://localhost:5000/api/v1/pages', {
+    const pagesRes = await axios.get('https://seo-brilliance-api.onrender.com/api/v1/pages', {
       headers: { Authorization: `Bearer ${token}` }
     });
     

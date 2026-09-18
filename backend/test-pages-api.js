@@ -11,7 +11,7 @@ async function test() {
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     
     // Hit the API
-    const res = await axios.get('http://localhost:5000/api/v1/pages', {
+    const res = await axios.get('https://seo-brilliance-api.onrender.com/api/v1/pages', {
       headers: { Authorization: `Bearer ${token}` }
     });
     console.log("SUCCESS length:", res.data.data?.pages?.length);

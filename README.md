@@ -66,7 +66,7 @@ Navigate to the root directory:
 npm install
 npm run dev
 ```
-Access the frontend application at `http://localhost:5173`. The frontend is configured to communicate with the backend running on `http://localhost:5000/api/v1`.
+Access the frontend application at `http://localhost:5173`. The frontend is configured to communicate with the backend running on `https://seo-brilliance-api.onrender.com/api/v1`.
 
 ---
 
