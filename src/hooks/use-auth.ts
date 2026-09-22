@@ -7,7 +7,7 @@ export const useAuth = () => {
 
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/auth/me').then(res => res.data),
+    queryFn: () => api.get('/auth/me').then((res: any) => res.data?.user ?? res.data),
     retry: false, // Don't retry if 401
     staleTime: Infinity, // Keep user data cached
   });

@@ -37,31 +37,31 @@ export const chat = async (req: Request, res: Response, next: NextFunction) => {
 
       contextString = `Website: ${scan.project.domain}\nOverall Score: ${scan.siteScore?.overallScore || 'N/A'}\nPages Crawled: ${scan.pagesCrawled}\nTotal Issues: ${scan.issuesFound}\n\n`;
 
-    // Fetch context-specific data
-    if (issueId) {
-      const issue = await prisma.issue.findFirst({
-        where: { id: issueId, page: { scanId } }
-      });
-      if (issue) {
-        contextString += `Specific Issue User is Asking About:\n- Title: ${issue.title}\n- Severity: ${issue.severity}\n- Rule: ${issue.ruleCode}\n- Found on URL: ${issue.url}\n\n`;
-      }
-    } else if (pageId) {
-      const page = await prisma.page.findFirst({
-        where: { id: pageId, scanId },
-        include: { issues: true }
-      });
-      if (page) {
-        contextString += `Specific Page User is Asking About:\n- URL: ${page.url}\n- Status: ${page.statusCode}\n- Indexable: ${page.isIndexable}\n- Issues on this page: ${page.issues.length}\n`;
-        contextString += formatIssuesForPrompt(page.issues) + '\n\n';
-      }
+      // Fetch context-specific data
+      if (issueId) {
+        const issue = await prisma.issue.findFirst({
+          where: { id: issueId, page: { scanId } }
+        });
+        if (issue) {
+          contextString += `Specific Issue User is Asking About:\n- Title: ${issue.title}\n- Severity: ${issue.severity}\n- Rule: ${issue.ruleCode}\n- Found on URL: ${issue.url}\n\n`;
+        }
+      } else if (pageId) {
+        const page = await prisma.page.findFirst({
+          where: { id: pageId, scanId },
+          include: { issues: true }
+        });
+        if (page) {
+          contextString += `Specific Page User is Asking About:\n- URL: ${page.url}\n- Status: ${page.statusCode}\n- Indexable: ${page.isIndexable}\n- Issues on this page: ${page.issues.length}\n`;
+          contextString += formatIssuesForPrompt(page.issues) + '\n\n';
+        }
       } else {
-        // General scan context
+        // General scan context - REDUCED TO 3 ISSUES TO SAVE CONTEXT SIZE
         const topIssues = await prisma.issue.findMany({
           where: { page: { scanId } },
           orderBy: [{ severity: 'asc' }],
-          take: 10
+          take: 3
         });
-        contextString += `Top Issues on Site:\n${formatIssuesForPrompt(topIssues)}\n\n`;
+        contextString += `Top 3 Issues on Site:\n${formatIssuesForPrompt(topIssues)}\n\n`;
       }
     }
 
@@ -85,15 +85,13 @@ ${contextString}
       ...history,
       { role: 'user', content: message }
     ];
-    
-    console.log("Checking GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "Present" : "Missing");
 
     if (!process.env.GEMINI_API_KEY) {
       // Fallback
       return res.status(200).json({ 
         success: true, 
         data: { 
-          answer: "[FALLBACK RESPONSE]\nI am currently running in fallback mode because no AI API key is configured. " + (scanId ? "However, based on your context: your score is " + (contextString.includes("Overall Score: N/A") ? 'N/A' : contextString.match(/Overall Score: (\d+)/)?.[1] || 'N/A') + " and you have issues. " : "") + "Please configure an API key for full AI functionality."
+          answer: "[FALLBACK RESPONSE]\nI am currently running in fallback mode because no AI API key is configured. Please configure an API key for full AI functionality."
         } 
       });
     }
@@ -114,21 +112,49 @@ ${contextString}
         history: formattedHistory,
       });
 
-      const result = await chatSession.sendMessage(message);
+      // Set headers for SSE streaming
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders();
 
-      return res.status(200).json({ success: true, data: { answer: result.response.text() } });
+      // Start streaming with a 15-second timeout for the first chunk
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('AI Request Timeout')), 15000)
+      );
+
+      const streamPromise = chatSession.sendMessageStream(message);
+      
+      const result = await Promise.race([streamPromise, timeoutPromise]) as any;
+
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+      }
+
+      res.write(`data: [DONE]\n\n`);
+      res.end();
+
     } catch (genAiError: any) {
       console.error("Gemini API Error:", genAiError.message);
       
-      const status = genAiError.status || 500;
-      const message = genAiError.message || "Unknown AI Provider Error";
-
-      return res.status(status).json({
-        success: false,
-        error: {
-          message: `AI Provider Error: ${message}`
+      // If headers are not sent, send a standard JSON error, else write event error
+      if (!res.headersSent) {
+        const status = genAiError.status || 500;
+        let errMsg = genAiError.message || "Unknown AI Provider Error";
+        if (errMsg === 'AI Request Timeout') {
+          errMsg = "The AI service is taking too long to respond. Here are the key findings from your SEO audit: " + contextString;
         }
-      });
+        return res.status(status).json({
+          success: false,
+          error: {
+            message: `AI Provider Error: ${errMsg}`
+          }
+        });
+      } else {
+        res.write(`data: ${JSON.stringify({ error: genAiError.message })}\n\n`);
+        res.end();
+      }
     }
   } catch (error: any) {
     next(error);

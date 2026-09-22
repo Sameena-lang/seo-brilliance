@@ -28,7 +28,10 @@ export class Worker {
 }
 
 class Queue {
-  constructor(private readonly name: string) {}
+  private activeCount = 0;
+  private pending: Job[] = [];
+
+  constructor(private readonly name: string, private concurrency: number = 50) {}
 
   async add(_jobName: string, data: Record<string, unknown>) {
     const handler = handlers.get(this.name);
@@ -37,16 +40,36 @@ class Queue {
     }
 
     const job = { id: String(++nextJobId), data };
-    setImmediate(() => {
-      handler(job).catch((error) => {
-        console.error(`Job ${job.id} on ${this.name} failed:`, error);
-      });
-    });
+    this.pending.push(job);
+    this.processNext();
     return job;
+  }
+
+  private processNext() {
+    if (this.activeCount >= this.concurrency || this.pending.length === 0) {
+      return;
+    }
+
+    const handler = handlers.get(this.name);
+    if (!handler) return;
+
+    const job = this.pending.shift()!;
+    this.activeCount++;
+
+    setImmediate(() => {
+      handler(job)
+        .catch((error) => {
+          console.error(`Job ${job.id} on ${this.name} failed:`, error);
+        })
+        .finally(() => {
+          this.activeCount--;
+          this.processNext();
+        });
+    });
   }
 }
 
-export const crawlQueue = new Queue('crawlQueue');
-export const seoQueue = new Queue('seoQueue');
-export const aiQueue = new Queue('aiQueue');
-export const reportQueue = new Queue('reportQueue');
+export const crawlQueue = new Queue('crawlQueue', 50);
+export const seoQueue = new Queue('seoQueue', 50);
+export const aiQueue = new Queue('aiQueue', 10);
+export const reportQueue = new Queue('reportQueue', 10);

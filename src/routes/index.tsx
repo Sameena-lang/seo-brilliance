@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowRight, BarChart, Check, FileText, Search, Shield, Zap, AlertTriangle, XCircle, Info } from "lucide-react";
 import { usePublicAnalyze } from "@/hooks/use-api";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const Route = createFileRoute("/")({
@@ -35,6 +36,20 @@ function Index() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleCheckout = async (plan: 'pro' | 'agency') => {
+    const toastId = toast.loading("Preparing checkout...");
+    try {
+      const res = await api.post('/payment/create-checkout-session', { plan }) as any;
+      toast.dismiss(toastId);
+      if (res.success && res.url) {
+        window.location.href = res.url;
+      }
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error(err.message || 'Failed to initiate checkout');
     }
   };
 
@@ -183,7 +198,7 @@ function Index() {
                   <span className="text-4xl font-bold tracking-tight text-foreground">$49</span>
                   <span className="text-sm font-semibold leading-6 text-muted-foreground">/month</span>
                 </p>
-                <Button className="mt-6 w-full" variant="outline">Get started today</Button>
+                <Button className="mt-6 w-full" variant="outline" onClick={() => handleCheckout('pro')}>Get started today</Button>
                 <ul className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground">
                   {['Up to 5 projects', '10,000 pages crawled per month', 'Weekly automated audits', 'Basic AI recommendations'].map((feature) => (
                     <li key={feature} className="flex gap-x-3">
@@ -202,7 +217,7 @@ function Index() {
                   <span className="text-4xl font-bold tracking-tight text-foreground">$149</span>
                   <span className="text-sm font-semibold leading-6 text-muted-foreground">/month</span>
                 </p>
-                <Button className="mt-6 w-full shadow-md shadow-primary/20">Get started today</Button>
+                <Button className="mt-6 w-full shadow-md shadow-primary/20" onClick={() => handleCheckout('agency')}>Get started today</Button>
                 <ul className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground">
                   {['Unlimited projects', '100,000 pages crawled per month', 'Daily automated audits', 'Advanced AI recommendations', 'White-label PDF reports'].map((feature) => (
                     <li key={feature} className="flex gap-x-3">

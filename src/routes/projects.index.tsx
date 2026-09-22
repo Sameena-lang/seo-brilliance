@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Folder, MoreHorizontal, Plus, Search, Filter } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export const Route = createFileRoute("/projects/")({
 });
 
 function ProjectsListRoute() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -199,14 +200,23 @@ function ProjectsListRoute() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link to="/projects/$projectId" params={{ projectId: project.id }}>View Details</Link>
+                          <DropdownMenuItem 
+                            onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
+                            className="cursor-pointer"
+                          >
+                            View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to="/scan" search={{ projectId: project.id }}>Re-scan now</Link>
+                          <DropdownMenuItem 
+                            onClick={() => navigate({ to: '/scan', search: { projectId: project.id } })}
+                            className="cursor-pointer"
+                          >
+                            Re-scan now
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to="/settings">Project settings</Link>
+                          <DropdownMenuItem 
+                            onClick={() => navigate({ to: '/settings' })}
+                            className="cursor-pointer"
+                          >
+                            Project settings
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive cursor-pointer"

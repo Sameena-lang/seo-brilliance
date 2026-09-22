@@ -46,60 +46,66 @@ export const getScan = async (scanId: string, organizationId: string) => {
     throw new Error('Scan not found');
   }
 
-  // Calculate page inventory stats
-  const pages = await prisma.page.findMany({
-    where: { scanId },
-    select: { statusCode: true, isIndexable: true, issues: { select: { id: true } } }
-  });
+  // Calculate page inventory stats via aggregations
+  const [
+    total, indexable, nonIndexable,
+    status200, status3xx, status4xx, status5xx,
+    withIssues, withoutIssues
+  ] = await Promise.all([
+    prisma.page.count({ where: { scanId } }),
+    prisma.page.count({ where: { scanId, isIndexable: true } }),
+    prisma.page.count({ where: { scanId, isIndexable: false } }),
+    prisma.page.count({ where: { scanId, statusCode: { gte: 200, lt: 300 } } }),
+    prisma.page.count({ where: { scanId, statusCode: { gte: 300, lt: 400 } } }),
+    prisma.page.count({ where: { scanId, statusCode: { gte: 400, lt: 500 } } }),
+    prisma.page.count({ where: { scanId, statusCode: { gte: 500 } } }),
+    prisma.page.count({ where: { scanId, issues: { some: {} } } }),
+    prisma.page.count({ where: { scanId, issues: { none: {} } } }),
+  ]);
 
   const pageInventory = {
-    total: pages.length,
-    indexable: pages.filter(p => p.isIndexable).length,
-    nonIndexable: pages.filter(p => !p.isIndexable).length,
-    status200: pages.filter(p => p.statusCode && p.statusCode >= 200 && p.statusCode < 300).length,
-    status3xx: pages.filter(p => p.statusCode && p.statusCode >= 300 && p.statusCode < 400).length,
-    status4xx: pages.filter(p => p.statusCode && p.statusCode >= 400 && p.statusCode < 500).length,
-    status5xx: pages.filter(p => p.statusCode && p.statusCode >= 500).length,
-    withIssues: pages.filter(p => p.issues.length > 0).length,
-    withoutIssues: pages.filter(p => p.issues.length === 0).length,
+    total,
+    indexable,
+    nonIndexable,
+    status200,
+    status3xx,
+    status4xx,
+    status5xx,
+    withIssues,
+    withoutIssues,
   };
 
-  // Get top priority issues
-  const rawIssues = await prisma.issue.findMany({
+  // Get grouped issues using Prisma groupBy
+  const groupedRaw = await prisma.issue.groupBy({
+    by: ['ruleCode', 'severity', 'title'],
     where: { page: { scanId } },
-    include: { page: { select: { url: true } } },
-    orderBy: { severity: 'asc' } // CRITICAL, then WARNING, then INFO (based on enum order in Prisma? Actually CRITICAL is first in enum, but let's sort in JS to be safe)
+    _count: { id: true },
+    _max: { url: true }
   });
 
   const { rules } = require('../seo/rules');
   const ruleMap = new Map();
   for (const r of rules) ruleMap.set(r.code, r);
 
-  const groupedIssues = new Map();
-  for (const issue of rawIssues) {
-    if (!groupedIssues.has(issue.ruleCode)) {
-      groupedIssues.set(issue.ruleCode, {
-        ruleCode: issue.ruleCode,
-        title: issue.title,
-        severity: issue.severity,
-        affectedPages: 0,
-        sampleUrl: issue.page.url,
-        whyItMatters: ruleMap.get(issue.ruleCode)?.whyItMatters || '',
-        howToFix: ruleMap.get(issue.ruleCode)?.howToFix || '',
-        example: ruleMap.get(issue.ruleCode)?.example || ''
-      });
-    }
-    groupedIssues.get(issue.ruleCode).affectedPages++;
-  }
-
-  const topIssues = Array.from(groupedIssues.values()).map(issue => {
+  const topIssues = groupedRaw.map(issue => {
     let priority = 'LOW';
+    const affectedPages = issue._count.id;
     if (issue.severity === 'CRITICAL') priority = 'HIGH';
-    if (issue.severity === 'CRITICAL' && issue.affectedPages > 5) priority = 'CRITICAL';
-    if (issue.severity === 'WARNING' && issue.affectedPages > 10) priority = 'HIGH';
-    if (issue.severity === 'WARNING' && issue.affectedPages <= 10) priority = 'MEDIUM';
+    if (issue.severity === 'CRITICAL' && affectedPages > 5) priority = 'CRITICAL';
+    if (issue.severity === 'WARNING' && affectedPages > 10) priority = 'HIGH';
+    if (issue.severity === 'WARNING' && affectedPages <= 10) priority = 'MEDIUM';
     
-    return { ...issue, priority };
+    return {
+      ruleCode: issue.ruleCode,
+      title: issue.title,
+      severity: issue.severity,
+      affectedPages,
+      sampleUrl: issue._max.url || '',
+      whyItMatters: ruleMap.get(issue.ruleCode)?.whyItMatters || '',
+      howToFix: ruleMap.get(issue.ruleCode)?.howToFix || '',
+      example: ruleMap.get(issue.ruleCode)?.example || '',
+      priority
+    };
   }).sort((a, b) => {
     const pScores = { 'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
     return pScores[b.priority as keyof typeof pScores] - pScores[a.priority as keyof typeof pScores];
@@ -126,7 +132,7 @@ export const getScan = async (scanId: string, organizationId: string) => {
       warning: scan.siteScore?.warningCount || 0,
       info: scan.siteScore?.infoCount || 0
     },
-    issues: rawIssues,
+    issues: [], // Not returned in bulk to improve performance
     topPriorityIssues: topIssues,
     recommendations: topIssues.map(i => ({ ruleCode: i.ruleCode, howToFix: i.howToFix })),
     aiSummary: scan.aiSummary,

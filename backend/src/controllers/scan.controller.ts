@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as scanService from '../services/scan.service';
+import prisma from '../config/db';
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -42,7 +43,14 @@ export const cancelScan = async (req: Request, res: Response, next: NextFunction
 
 export const getProgress = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const scan = await scanService.getScan(String(req.params.scanId), req.user.organizationId);
+    const scan = await prisma.scan.findFirst({
+      where: { id: String(req.params.scanId), project: { organizationId: req.user.organizationId } }
+    });
+    
+    if (!scan) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Scan not found' } });
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -55,9 +63,6 @@ export const getProgress = async (req: Request, res: Response, next: NextFunctio
       }
     });
   } catch (error: any) {
-    if (error.message === 'Scan not found') {
-      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Scan not found' } });
-    }
     next(error);
   }
 };

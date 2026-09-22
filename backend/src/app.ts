@@ -91,6 +91,7 @@ import reportRoutes from './routes/report.routes';
 import publicRoutes from './routes/public.routes';
 import subscriptionRoutes from './routes/subscription.routes';
 import aiRoutes from './routes/ai.routes';
+import paymentRoutes from './routes/payment.routes';
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
@@ -105,6 +106,7 @@ app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/public', publicRoutes);
 app.use('/api/v1/subscription', subscriptionRoutes);
 app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/payment', paymentRoutes);
 
 import prisma from './config/db';
 import './workers';
@@ -132,3 +134,5 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 export default app;
+
+// trigger restart

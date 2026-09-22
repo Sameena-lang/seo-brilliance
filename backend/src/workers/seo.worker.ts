@@ -53,7 +53,18 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
 
     if (isDone) {
       if (scan.status !== 'COMPLETED') {
-         const pages = await prisma.page.findMany({ where: { scanId }, include: { issues: true } });
+         const pages = await prisma.page.findMany({ where: { scanId }, select: { id: true } });
+         const allIssues = await prisma.issue.findMany({ 
+           where: { page: { scanId } }, 
+           select: { pageId: true, ruleCode: true, severity: true } 
+         });
+         
+         const pageIssuesMap = new Map();
+         for (const issue of allIssues) {
+           if (!pageIssuesMap.has(issue.pageId)) pageIssuesMap.set(issue.pageId, []);
+           pageIssuesMap.get(issue.pageId).push(issue);
+         }
+
          let totalScore = 0;
          const catScores = { Technical: { total: 0, count: 0 }, Content: { total: 0, count: 0 }, Performance: { total: 0, count: 0 }, Indexability: { total: 0, count: 0 }, Accessibility: { total: 0, count: 0 }, StructuredData: { total: 0, count: 0 } };
 
@@ -71,8 +82,10 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
            let pageInfo = 0;
            
            const pageCatScores = { Technical: 100, Content: 100, Performance: 100, Indexability: 100, Accessibility: 100, StructuredData: 100 };
+           
+           const pageIssues = pageIssuesMap.get(page.id) || [];
 
-           for (const issue of page.issues) {
+           for (const issue of pageIssues) {
              if (issue.severity === 'CRITICAL') pageCrit++;
              if (issue.severity === 'WARNING') pageWarn++;
              if (issue.severity === 'INFO') pageInfo++;
@@ -80,11 +93,11 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
              const cat = ruleCategoryMap.get(issue.ruleCode) || 'Technical';
              const catKey = cat.replace(/\s+/g, '');
              if (pageCatScores[catKey as keyof typeof pageCatScores] !== undefined) {
-               // Pro users get a 50% reduction in penalty for WARNINGs and INFOs
+               // Stricter penalties to prevent artificially high scores
                const isPro = scan.project.organization?.tier === 'PRO';
-               const warnPenalty = isPro ? 1.5 : 3;
-               const infoPenalty = isPro ? 0.5 : 1;
-               const critPenalty = 10; // Criticals are always fully penalized
+               const warnPenalty = isPro ? 7.5 : 15;
+               const infoPenalty = isPro ? 2.5 : 5;
+               const critPenalty = 30; // Criticals are always heavily penalized
 
                if (issue.severity === 'CRITICAL') pageCatScores[catKey as keyof typeof pageCatScores] -= critPenalty;
                if (issue.severity === 'WARNING') pageCatScores[catKey as keyof typeof pageCatScores] -= warnPenalty;
@@ -93,11 +106,11 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
            }
            
            const isPro = scan.project.organization?.tier === 'PRO';
-           const warnPenalty = isPro ? 1.5 : 3;
-           const infoPenalty = isPro ? 0.5 : 1;
-           const critPenalty = 10;
+           const warnPenalty = isPro ? 7.5 : 15;
+           const infoPenalty = isPro ? 2.5 : 5;
+           const critPenalty = 30;
            
-           // Pro users get an overall boost
+           // Pro users get a slight leniency boost
            const baseScore = isPro ? 105 : 100;
            const pageScore = Math.min(100, Math.max(0, baseScore - (pageCrit * critPenalty) - (pageWarn * warnPenalty) - (pageInfo * infoPenalty)));
            totalScore += pageScore;

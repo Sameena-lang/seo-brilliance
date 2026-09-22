@@ -16,6 +16,8 @@ export function AiChatAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [streamStatus, setStreamStatus] = useState<'idle' | 'thinking' | 'generating'>('idle');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function AiChatAssistant() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, [messages, streamStatus, streamingText]);
 
   const handleSendMessage = async (text: string, overrideContext?: any) => {
     if (!text.trim()) return;
@@ -48,23 +50,79 @@ export function AiChatAssistant() {
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
+    setStreamStatus('thinking');
+    setStreamingText('');
 
     try {
-      const response = await api.post('/ai/chat', {
-        scanId: activeContext.scanId,
-        issueId: activeContext.issueId,
-        pageId: activeContext.pageId,
-        message: text,
-        history: messages.map(m => ({ role: m.role, content: m.content }))
+      const token = localStorage.getItem('token');
+      const API_URL = import.meta.env.VITE_API_URL || 'https://seo-brilliance-api.onrender.com/api/v1';
+      
+      const response = await fetch(`${API_URL}/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          scanId: activeContext.scanId,
+          issueId: activeContext.issueId,
+          pageId: activeContext.pageId,
+          message: text,
+          history: messages.map(m => ({ role: m.role, content: m.content }))
+        })
       });
 
-      setMessages([...newMessages, { role: 'assistant', content: response.data.answer }]);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData?.error?.message || 'Failed to get a response');
+      }
+
+      setStreamStatus('generating');
+      
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      if (reader) {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6);
+              if (dataStr === '[DONE]') break;
+              
+              try {
+                const data = JSON.parse(dataStr);
+                if (data.error) {
+                  throw new Error(data.error);
+                }
+                if (data.text) {
+                  fullResponse += data.text;
+                  setStreamingText(fullResponse);
+                }
+              } catch (e) {
+                // Ignore parse errors on partial chunks
+              }
+            }
+          }
+        }
+      }
+
+      setMessages([...newMessages, { role: 'assistant', content: fullResponse }]);
+      setStreamStatus('idle');
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to get a response';
       toast.error(errorMessage);
       setMessages([...newMessages, { role: 'assistant', content: `[Error] ${errorMessage}` }]);
+      setStreamStatus('idle');
     } finally {
       setIsLoading(false);
+      setStreamingText('');
     }
   };
 
@@ -116,10 +174,14 @@ export function AiChatAssistant() {
             </div>
           ))
         )}
-        {isLoading && (
+        
+        {streamStatus !== 'idle' && (
           <div className="flex justify-start">
-            <div className="max-w-[85%] rounded-lg p-3 text-sm bg-muted text-foreground flex items-center gap-2">
-              <Loader2 className="size-4 animate-spin text-primary" /> Thinking...
+            <div className="max-w-[85%] rounded-lg p-3 text-sm bg-muted text-foreground whitespace-pre-wrap">
+              {streamStatus === 'thinking' && (
+                <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin text-primary" /> Thinking...</span>
+              )}
+              {streamStatus === 'generating' && streamingText}
             </div>
           </div>
         )}

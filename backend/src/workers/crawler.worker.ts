@@ -4,6 +4,23 @@ import prisma from '../config/db';
 import { seoQueue } from '../queues';
 import { normalizeUrl, isAllowedDomain, isSafeUrl } from '../crawler/utils';
 import { extractPageData } from '../crawler/parser';
+import http from 'http';
+import https from 'https';
+
+const httpAgent = new http.Agent({ keepAlive: true });
+const httpsAgent = new https.Agent({ keepAlive: true });
+const axiosClient = axios.create({
+  httpAgent,
+  httpsAgent,
+  timeout: 10000,
+  headers: { 'User-Agent': 'SEO-Intelligence-Bot/1.0' },
+  maxRedirects: 0,
+  maxContentLength: 5 * 1024 * 1024,
+  validateStatus: () => true
+});
+
+// In-memory cache for deduplication to prevent DB roundtrips for pageExists
+const visitedCache = new Map<string, Set<string>>();
 
 export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
   console.log(`[Worker] Started job ${job.id} for scan ${job.data.scanId}`);
@@ -67,7 +84,22 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     return;
   }
 
-  // Check if we've already crawled or reached max pages limits
+  // In-memory deduplication first
+  let scanCache = visitedCache.get(scanId);
+  if (!scanCache) {
+    scanCache = new Set<string>();
+    visitedCache.set(scanId, scanCache);
+  }
+  
+  if (scanCache.has(normUrl)) {
+    // Already crawled or queued
+    await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+    await seoQueue.add('analyzeSeo', { scanId });
+    return;
+  }
+  scanCache.add(normUrl);
+
+  // Still check DB in case of process restart, but cache handles 99% of dupes
   const pageExists = await prisma.page.findFirst({
     where: { scanId, normalizedUrl: normUrl }
   });
@@ -90,13 +122,7 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
 
   try {
     const startTime = Date.now();
-    const response = await axios.get(normUrl, {
-      timeout: 10000,
-      headers: { 'User-Agent': 'SEO-Intelligence-Bot/1.0' },
-      maxRedirects: 0,
-      maxContentLength: 5 * 1024 * 1024, // 5MB limit
-      validateStatus: (status) => true
-    });
+    const response = await axiosClient.get(normUrl);
     const loadTimeMs = Date.now() - startTime;
 
     if (response.status >= 300 && response.status < 400) {
@@ -191,33 +217,39 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
       }
     });
 
-    // Update stats
-    await prisma.scan.update({
-      where: { id: scanId },
-      data: {
-        pagesCrawled: { increment: 1 },
-        pagesDiscovered: { increment: extracted.internalLinks.length },
-      }
-    });
-
     // Queue for SEO analysis
     await seoQueue.add('analyzeSeo', { scanId, pageId: page.id });
 
     // Queue internal links
     const rootUrlStr = scan.project?.rootUrl || normUrl;
     const includeSubdomains = settings?.includeSubdomains === true;
+    
+    let newlyDiscovered = 0;
+    const q = await import('../queues');
 
     for (const link of extracted.internalLinks) {
        if (!isAllowedDomain(link, rootUrlStr, includeSubdomains)) {
          continue;
        }
-       // Fire and forget - add to crawl queue directly
-       import('../queues').then(q => {
-          q.crawlQueue.add('startCrawl', { 
-            scanId, projectId, url: link, settings, currentDepth: currentDepth + 1 
-          });
-       });
+       
+       const normLink = normalizeUrl(link, url);
+       if (normLink && !scanCache.has(normLink)) {
+         scanCache.add(normLink); // Mark as queued
+         newlyDiscovered++;
+         q.crawlQueue.add('startCrawl', { 
+           scanId, projectId, url: link, settings, currentDepth: currentDepth + 1 
+         });
+       }
     }
+
+    // Update stats with ONLY newly discovered links to avoid +/- thrashing
+    await prisma.scan.update({
+      where: { id: scanId },
+      data: {
+        pagesCrawled: { increment: 1 },
+        pagesDiscovered: { increment: newlyDiscovered - extracted.internalLinks.length }, 
+      }
+    });
 
   } catch (error: any) {
     const status = error.response?.status || 0;
