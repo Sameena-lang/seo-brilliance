@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AgencyRouteImport } from './routes/agency'
 import { Route as AiActionPlanRouteImport } from './routes/ai-action-plan'
 import { Route as AiCopilotRouteImport } from './routes/ai-copilot'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
@@ -26,6 +28,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as SearchConsoleRouteImport } from './routes/search-console'
 import { Route as SeoHealthRouteImport } from './routes/seo-health'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as IssuesIndexRouteImport } from './routes/issues.index'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues.$issueId'
 import { Route as PagesPageIdRouteImport } from './routes/pages.$pageId'
@@ -38,6 +41,16 @@ import { Route as ScanResultsRouteImport } from './routes/scan.results'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgencyRoute = AgencyRouteImport.update({
+  id: '/agency',
+  path: '/agency',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiActionPlanRoute = AiActionPlanRouteImport.update({
@@ -120,6 +133,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const IssuesIndexRoute = IssuesIndexRouteImport.update({
   id: '/issues/',
   path: '/issues/',
@@ -163,6 +181,8 @@ const ScanResultsRoute = ScanResultsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/agency': typeof AgencyRoute
   '/ai-action-plan': typeof AiActionPlanRoute
   '/ai-copilot': typeof AiCopilotRoute
   '/analytics': typeof AnalyticsRoute
@@ -184,12 +204,14 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/scan/live': typeof ScanLiveRoute
   '/scan/results': typeof ScanResultsRoute
+  '/admin/': typeof AdminIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/scan/': typeof ScanIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agency': typeof AgencyRoute
   '/ai-action-plan': typeof AiActionPlanRoute
   '/ai-copilot': typeof AiCopilotRoute
   '/analytics': typeof AnalyticsRoute
@@ -211,6 +233,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/scan/live': typeof ScanLiveRoute
   '/scan/results': typeof ScanResultsRoute
+  '/admin': typeof AdminIndexRoute
   '/issues': typeof IssuesIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/scan': typeof ScanIndexRoute
@@ -218,6 +241,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/agency': typeof AgencyRoute
   '/ai-action-plan': typeof AiActionPlanRoute
   '/ai-copilot': typeof AiCopilotRoute
   '/analytics': typeof AnalyticsRoute
@@ -239,6 +264,7 @@ export interface FileRoutesById {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/scan/live': typeof ScanLiveRoute
   '/scan/results': typeof ScanResultsRoute
+  '/admin/': typeof AdminIndexRoute
   '/issues/': typeof IssuesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/scan/': typeof ScanIndexRoute
@@ -247,6 +273,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
+    | '/agency'
     | '/ai-action-plan'
     | '/ai-copilot'
     | '/analytics'
@@ -268,12 +296,14 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/scan/live'
     | '/scan/results'
+    | '/admin/'
     | '/issues/'
     | '/projects/'
     | '/scan/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agency'
     | '/ai-action-plan'
     | '/ai-copilot'
     | '/analytics'
@@ -295,12 +325,15 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/scan/live'
     | '/scan/results'
+    | '/admin'
     | '/issues'
     | '/projects'
     | '/scan'
   id:
     | '__root__'
     | '/'
+    | '/admin'
+    | '/agency'
     | '/ai-action-plan'
     | '/ai-copilot'
     | '/analytics'
@@ -322,6 +355,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/scan/live'
     | '/scan/results'
+    | '/admin/'
     | '/issues/'
     | '/projects/'
     | '/scan/'
@@ -329,6 +363,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  AgencyRoute: typeof AgencyRoute
   AiActionPlanRoute: typeof AiActionPlanRoute
   AiCopilotRoute: typeof AiCopilotRoute
   AnalyticsRoute: typeof AnalyticsRoute
@@ -361,6 +397,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agency': {
+      id: '/agency'
+      path: '/agency'
+      fullPath: '/agency'
+      preLoaderRoute: typeof AgencyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai-action-plan': {
@@ -475,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/issues/': {
       id: '/issues/'
       path: '/issues'
@@ -534,6 +591,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface PagesRouteChildren {
   PagesPageIdRoute: typeof PagesPageIdRoute
 }
@@ -546,6 +613,8 @@ const PagesRouteWithChildren = PagesRoute._addFileChildren(PagesRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  AgencyRoute: AgencyRoute,
   AiActionPlanRoute: AiActionPlanRoute,
   AiCopilotRoute: AiCopilotRoute,
   AnalyticsRoute: AnalyticsRoute,

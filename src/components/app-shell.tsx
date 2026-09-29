@@ -16,7 +16,8 @@ import {
   Target,
   Users,
   Sparkles,
-  BarChart3
+  BarChart3,
+  Building
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "@/components/brand";
@@ -45,7 +46,10 @@ import { CommandPalette } from "@/components/command-palette";
 const navGroups = [
   {
     label: "Overview",
-    items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+    items: [
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/agency", label: "Agency", icon: Building },
+    ],
   },
   {
     label: "SEO Intelligence",

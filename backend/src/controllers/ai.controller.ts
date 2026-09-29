@@ -103,13 +103,15 @@ ${contextString}
     ];
 
     if (!process.env.GEMINI_API_KEY) {
-      // Fallback
-      return res.status(200).json({ 
-        success: true, 
-        data: { 
-          answer: "[FALLBACK RESPONSE]\nI am currently running in fallback mode because no AI API key is configured. Please configure an API key for full AI functionality."
-        } 
-      });
+      // Fallback using SSE format
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders();
+
+      res.write(`data: ${JSON.stringify({ text: "[FALLBACK RESPONSE]\nI am currently running in fallback mode because no AI API key is configured. Please configure an API key for full AI functionality." })}\n\n`);
+      res.write(`data: [DONE]\n\n`);
+      return res.end();
     }
 
     try {

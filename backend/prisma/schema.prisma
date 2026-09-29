@@ -47,6 +47,15 @@ model Organization {
 
   users    User[]
   projects Project[]
+
+  // Phase 5 Relations
+  members        OrganizationMember[] @relation("OrgMembers")
+  invitations    Invitation[]         @relation("OrgInvitations")
+  subscription   Subscription?        @relation("OrgSubscription")
+  usageRecords   UsageRecord[]        @relation("OrgUsage")
+  notifications  Notification[]       @relation("OrgNotifications")
+  auditLogs      AuditLog[]           @relation("OrgAuditLogs")
+  whiteLabel     WhiteLabelSettings?  @relation("OrgWhiteLabel")
 }
 
 model User {
@@ -56,12 +65,17 @@ model User {
   email          String       @unique
   passwordHash   String
   role           Role         @default(USER)
+  systemRole     String       @default("USER") // SUPER_ADMIN, ADMIN, USER
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   projects       Project[]
   aiConversations AiConversation[]
+
+  // Phase 5 Relations
+  memberships    OrganizationMember[]
+  notifications  Notification[]       @relation("UserNotifications")
 
   @@index([organizationId])
 }
@@ -86,6 +100,7 @@ model Project {
   aiConversations AiConversation[]
   integrationConnections IntegrationConnection[]
   externalMetrics ExternalMetricSnapshot[]
+  schedules      ScheduledScan[] @relation("ProjectSchedules")
 
   @@index([organizationId])
 }
@@ -399,4 +414,149 @@ model AiUsage {
 
   @@index([userId])
   @@index([projectId])
+}
+
+// =====================================
+// PHASE 5 COMMERCIAL SAAS MODELS
+// =====================================
+
+model OrganizationMember {
+  id             String       @id @default(uuid())
+  userId         String
+  organizationId String
+  role           String       @default("MEMBER") // OWNER, ADMIN, MANAGER, MEMBER, VIEWER
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation("OrgMembers", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model Invitation {
+  id             String       @id @default(uuid())
+  email          String
+  organizationId String
+  role           String       @default("MEMBER")
+  token          String       @unique
+  expiresAt      DateTime
+  status         String       @default("PENDING") // PENDING, ACCEPTED, EXPIRED
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation("OrgInvitations", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([organizationId])
+  @@index([token])
+}
+
+model Subscription {
+  id               String       @id @default(uuid())
+  organizationId   String       @unique
+  planId           String
+  status           String       // ACTIVE, CANCELED, PAST_DUE
+  provider         String       // STRIPE
+  providerSubId    String?      @unique
+  providerCustId   String?
+  currentPeriodEnd DateTime?
+  cancelAtPeriodEnd Boolean     @default(false)
+  features         Json?        // Override limits if custom
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  organization     Organization @relation("OrgSubscription", fields: [organizationId], references: [id], onDelete: Cascade)
+  plan             Plan         @relation(fields: [planId], references: [id])
+}
+
+model Plan {
+  id               String       @id @default(uuid())
+  name             String       // FREE, STARTER, PRO, AGENCY
+  code             String       @unique
+  priceMonthly     Int          // In cents
+  currency         String       @default("usd")
+  
+  // Limits
+  maxProjects      Int
+  maxScansPerMonth Int
+  maxPagesPerScan  Int
+  maxAiRequests    Int
+  maxTeamMembers   Int
+  retentionDays    Int
+  
+  // Features
+  hasWhiteLabel    Boolean      @default(false)
+  hasApiAccess     Boolean      @default(false)
+  
+  subscriptions    Subscription[]
+}
+
+model UsageRecord {
+  id               String       @id @default(uuid())
+  organizationId   String
+  resource         String       // SCANS, AI_REQUESTS, PAGES_CRAWLED
+  amount           Int
+  date             DateTime     @default(now())
+  
+  organization     Organization @relation("OrgUsage", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, resource, date])
+}
+
+model ScheduledScan {
+  id             String       @id @default(uuid())
+  projectId      String
+  schedule       String       // DAILY, WEEKLY, MONTHLY
+  timezone       String       @default("UTC")
+  nextRun        DateTime?
+  lastRun        DateTime?
+  enabled        Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project        Project      @relation("ProjectSchedules", fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String?      // Optional, if null it's for the whole org
+  title          String
+  message        String
+  type           String       // INFO, WARNING, ERROR, SUCCESS
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation("OrgNotifications", fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id             String       @id @default(uuid())
+  organizationId String?
+  actorId        String?
+  action         String
+  target         String?
+  metadata       Json?
+  ipAddress      String?
+  createdAt      DateTime     @default(now())
+
+  organization   Organization? @relation("OrgAuditLogs", fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model WhiteLabelSettings {
+  id               String       @id @default(uuid())
+  organizationId   String       @unique
+  companyName      String?
+  logoUrl          String?
+  primaryColor     String?
+  website          String?
+  footerText       String?
+  contactEmail     String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  organization     Organization @relation("OrgWhiteLabel", fields: [organizationId], references: [id], onDelete: Cascade)
 }

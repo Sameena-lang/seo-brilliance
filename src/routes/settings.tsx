@@ -55,11 +55,14 @@ function SettingsContent() {
   return (
     <div className="mx-auto max-w-4xl">
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="mb-6 bg-muted/50 border border-border">
+          <TabsList className="mb-6 bg-muted/50 border border-border flex-wrap h-auto p-1">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="team">Team</TabsTrigger>
+            <TabsTrigger value="billing">Billing</TabsTrigger>
+            <TabsTrigger value="usage">Usage</TabsTrigger>
           </TabsList>
           
           <TabsContent value="profile" className="space-y-6">
@@ -222,6 +225,107 @@ function SettingsContent() {
                   <Switch 
                     onCheckedChange={(c) => toast(`Marketing emails ${c ? 'enabled' : 'disabled'}`)}
                   />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="team" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Management</CardTitle>
+                <CardDescription>
+                  Manage organization members and their roles.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Sameena (You)</Label>
+                    <p className="text-sm text-muted-foreground">sameena@example.com</p>
+                  </div>
+                  <div className="text-sm font-medium px-3 py-1 bg-primary/10 text-primary rounded-full">
+                    OWNER
+                  </div>
+                </div>
+                <Button variant="outline" className="w-full">
+                  Invite Member
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="billing" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Billing & Subscription</CardTitle>
+                <CardDescription>
+                  Manage your plan, invoices, and payment methods.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h4 className="font-semibold text-lg">Pro Plan</h4>
+                      <p className="text-sm text-muted-foreground">$49/month • Renews Oct 29, 2026</p>
+                    </div>
+                    <div className="text-sm font-medium px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full">
+                      ACTIVE
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">Manage Subscription</Button>
+                    <Button variant="ghost" size="sm">View Invoices</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="usage" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Usage Limits</CardTitle>
+                <CardDescription>
+                  Track your organization's resource consumption against plan limits.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <Label>Projects</Label>
+                    <span className="text-muted-foreground">3 / 10</span>
+                  </div>
+                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-primary w-[30%]" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <Label>Scans per month</Label>
+                    <span className="text-muted-foreground">21 / 100</span>
+                  </div>
+                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-primary w-[21%]" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <Label>Pages crawled</Label>
+                    <span className="text-muted-foreground">14,520 / 50,000</span>
+                  </div>
+                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-primary w-[29%]" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <Label>AI Requests</Label>
+                    <span className="text-muted-foreground">87 / 500</span>
+                  </div>
+                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-primary w-[17%]" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
