@@ -10,15 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AiActionPlanRouteImport } from './routes/ai-action-plan'
+import { Route as AiCopilotRouteImport } from './routes/ai-copilot'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as CompetitorsRouteImport } from './routes/competitors'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as IntegrationsRouteImport } from './routes/integrations'
+import { Route as KeywordsRouteImport } from './routes/keywords'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as PagesRouteImport } from './routes/pages'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as SearchConsoleRouteImport } from './routes/search-console'
+import { Route as SeoHealthRouteImport } from './routes/seo-health'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IssuesIndexRouteImport } from './routes/issues.index'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues.$issueId'
+import { Route as PagesPageIdRouteImport } from './routes/pages.$pageId'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as ScanIndexRouteImport } from './routes/scan.index'
@@ -30,9 +40,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiActionPlanRoute = AiActionPlanRouteImport.update({
+  id: '/ai-action-plan',
+  path: '/ai-action-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiCopilotRoute = AiCopilotRouteImport.update({
+  id: '/ai-copilot',
+  path: '/ai-copilot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompetitorsRoute = CompetitorsRouteImport.update({
+  id: '/competitors',
+  path: '/competitors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -40,9 +70,24 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IntegrationsRoute = IntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KeywordsRoute = KeywordsRouteImport.update({
+  id: '/keywords',
+  path: '/keywords',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpportunitiesRoute = OpportunitiesRouteImport.update({
+  id: '/opportunities',
+  path: '/opportunities',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PagesRoute = PagesRouteImport.update({
@@ -60,6 +105,16 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SearchConsoleRoute = SearchConsoleRouteImport.update({
+  id: '/search-console',
+  path: '/search-console',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SeoHealthRoute = SeoHealthRouteImport.update({
+  id: '/seo-health',
+  path: '/seo-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -74,6 +129,11 @@ const IssuesIssueIdRoute = IssuesIssueIdRouteImport.update({
   id: '/issues/$issueId',
   path: '/issues/$issueId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PagesPageIdRoute = PagesPageIdRouteImport.update({
+  id: '/$pageId',
+  path: '/$pageId',
+  getParentRoute: () => PagesRoute,
 } as any)
 const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   id: '/projects/',
@@ -103,14 +163,24 @@ const ScanResultsRoute = ScanResultsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-action-plan': typeof AiActionPlanRoute
+  '/ai-copilot': typeof AiCopilotRoute
+  '/analytics': typeof AnalyticsRoute
   '/checkout': typeof CheckoutRoute
+  '/competitors': typeof CompetitorsRoute
   '/dashboard': typeof DashboardRoute
+  '/integrations': typeof IntegrationsRoute
+  '/keywords': typeof KeywordsRoute
   '/login': typeof LoginRoute
-  '/pages': typeof PagesRoute
+  '/opportunities': typeof OpportunitiesRoute
+  '/pages': typeof PagesRouteWithChildren
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/search-console': typeof SearchConsoleRoute
+  '/seo-health': typeof SeoHealthRoute
   '/settings': typeof SettingsRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
+  '/pages/$pageId': typeof PagesPageIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/scan/live': typeof ScanLiveRoute
   '/scan/results': typeof ScanResultsRoute
@@ -120,14 +190,24 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-action-plan': typeof AiActionPlanRoute
+  '/ai-copilot': typeof AiCopilotRoute
+  '/analytics': typeof AnalyticsRoute
   '/checkout': typeof CheckoutRoute
+  '/competitors': typeof CompetitorsRoute
   '/dashboard': typeof DashboardRoute
+  '/integrations': typeof IntegrationsRoute
+  '/keywords': typeof KeywordsRoute
   '/login': typeof LoginRoute
-  '/pages': typeof PagesRoute
+  '/opportunities': typeof OpportunitiesRoute
+  '/pages': typeof PagesRouteWithChildren
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/search-console': typeof SearchConsoleRoute
+  '/seo-health': typeof SeoHealthRoute
   '/settings': typeof SettingsRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
+  '/pages/$pageId': typeof PagesPageIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/scan/live': typeof ScanLiveRoute
   '/scan/results': typeof ScanResultsRoute
@@ -138,14 +218,24 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-action-plan': typeof AiActionPlanRoute
+  '/ai-copilot': typeof AiCopilotRoute
+  '/analytics': typeof AnalyticsRoute
   '/checkout': typeof CheckoutRoute
+  '/competitors': typeof CompetitorsRoute
   '/dashboard': typeof DashboardRoute
+  '/integrations': typeof IntegrationsRoute
+  '/keywords': typeof KeywordsRoute
   '/login': typeof LoginRoute
-  '/pages': typeof PagesRoute
+  '/opportunities': typeof OpportunitiesRoute
+  '/pages': typeof PagesRouteWithChildren
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/search-console': typeof SearchConsoleRoute
+  '/seo-health': typeof SeoHealthRoute
   '/settings': typeof SettingsRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
+  '/pages/$pageId': typeof PagesPageIdRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/scan/live': typeof ScanLiveRoute
   '/scan/results': typeof ScanResultsRoute
@@ -157,14 +247,24 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ai-action-plan'
+    | '/ai-copilot'
+    | '/analytics'
     | '/checkout'
+    | '/competitors'
     | '/dashboard'
+    | '/integrations'
+    | '/keywords'
     | '/login'
+    | '/opportunities'
     | '/pages'
     | '/register'
     | '/reports'
+    | '/search-console'
+    | '/seo-health'
     | '/settings'
     | '/issues/$issueId'
+    | '/pages/$pageId'
     | '/projects/$projectId'
     | '/scan/live'
     | '/scan/results'
@@ -174,14 +274,24 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ai-action-plan'
+    | '/ai-copilot'
+    | '/analytics'
     | '/checkout'
+    | '/competitors'
     | '/dashboard'
+    | '/integrations'
+    | '/keywords'
     | '/login'
+    | '/opportunities'
     | '/pages'
     | '/register'
     | '/reports'
+    | '/search-console'
+    | '/seo-health'
     | '/settings'
     | '/issues/$issueId'
+    | '/pages/$pageId'
     | '/projects/$projectId'
     | '/scan/live'
     | '/scan/results'
@@ -191,14 +301,24 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/ai-action-plan'
+    | '/ai-copilot'
+    | '/analytics'
     | '/checkout'
+    | '/competitors'
     | '/dashboard'
+    | '/integrations'
+    | '/keywords'
     | '/login'
+    | '/opportunities'
     | '/pages'
     | '/register'
     | '/reports'
+    | '/search-console'
+    | '/seo-health'
     | '/settings'
     | '/issues/$issueId'
+    | '/pages/$pageId'
     | '/projects/$projectId'
     | '/scan/live'
     | '/scan/results'
@@ -209,12 +329,21 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiActionPlanRoute: typeof AiActionPlanRoute
+  AiCopilotRoute: typeof AiCopilotRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   CheckoutRoute: typeof CheckoutRoute
+  CompetitorsRoute: typeof CompetitorsRoute
   DashboardRoute: typeof DashboardRoute
+  IntegrationsRoute: typeof IntegrationsRoute
+  KeywordsRoute: typeof KeywordsRoute
   LoginRoute: typeof LoginRoute
-  PagesRoute: typeof PagesRoute
+  OpportunitiesRoute: typeof OpportunitiesRoute
+  PagesRoute: typeof PagesRouteWithChildren
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
+  SearchConsoleRoute: typeof SearchConsoleRoute
+  SeoHealthRoute: typeof SeoHealthRoute
   SettingsRoute: typeof SettingsRoute
   IssuesIssueIdRoute: typeof IssuesIssueIdRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
@@ -234,11 +363,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai-action-plan': {
+      id: '/ai-action-plan'
+      path: '/ai-action-plan'
+      fullPath: '/ai-action-plan'
+      preLoaderRoute: typeof AiActionPlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-copilot': {
+      id: '/ai-copilot'
+      path: '/ai-copilot'
+      fullPath: '/ai-copilot'
+      preLoaderRoute: typeof AiCopilotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout': {
       id: '/checkout'
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/competitors': {
+      id: '/competitors'
+      path: '/competitors'
+      fullPath: '/competitors'
+      preLoaderRoute: typeof CompetitorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -248,11 +405,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/integrations': {
+      id: '/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof IntegrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/keywords': {
+      id: '/keywords'
+      path: '/keywords'
+      fullPath: '/keywords'
+      preLoaderRoute: typeof KeywordsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/opportunities': {
+      id: '/opportunities'
+      path: '/opportunities'
+      fullPath: '/opportunities'
+      preLoaderRoute: typeof OpportunitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pages': {
@@ -276,6 +454,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/search-console': {
+      id: '/search-console'
+      path: '/search-console'
+      fullPath: '/search-console'
+      preLoaderRoute: typeof SearchConsoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/seo-health': {
+      id: '/seo-health'
+      path: '/seo-health'
+      fullPath: '/seo-health'
+      preLoaderRoute: typeof SeoHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -296,6 +488,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/issues/$issueId'
       preLoaderRoute: typeof IssuesIssueIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/pages/$pageId': {
+      id: '/pages/$pageId'
+      path: '/$pageId'
+      fullPath: '/pages/$pageId'
+      preLoaderRoute: typeof PagesPageIdRouteImport
+      parentRoute: typeof PagesRoute
     }
     '/projects/': {
       id: '/projects/'
@@ -335,14 +534,33 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface PagesRouteChildren {
+  PagesPageIdRoute: typeof PagesPageIdRoute
+}
+
+const PagesRouteChildren: PagesRouteChildren = {
+  PagesPageIdRoute: PagesPageIdRoute,
+}
+
+const PagesRouteWithChildren = PagesRoute._addFileChildren(PagesRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiActionPlanRoute: AiActionPlanRoute,
+  AiCopilotRoute: AiCopilotRoute,
+  AnalyticsRoute: AnalyticsRoute,
   CheckoutRoute: CheckoutRoute,
+  CompetitorsRoute: CompetitorsRoute,
   DashboardRoute: DashboardRoute,
+  IntegrationsRoute: IntegrationsRoute,
+  KeywordsRoute: KeywordsRoute,
   LoginRoute: LoginRoute,
-  PagesRoute: PagesRoute,
+  OpportunitiesRoute: OpportunitiesRoute,
+  PagesRoute: PagesRouteWithChildren,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
+  SearchConsoleRoute: SearchConsoleRoute,
+  SeoHealthRoute: SeoHealthRoute,
   SettingsRoute: SettingsRoute,
   IssuesIssueIdRoute: IssuesIssueIdRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,

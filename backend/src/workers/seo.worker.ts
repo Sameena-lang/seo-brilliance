@@ -10,26 +10,36 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
   if (pageId) {
     const page = await prisma.page.findUnique({ where: { id: pageId } });
     if (page) {
-      // Only evaluate SEO rules if we successfully fetched and parsed the HTML page
-      if (page.statusCode && page.statusCode >= 200 && page.statusCode < 300 && page.contentType?.includes('text/html')) {
-        issues = await evaluatePage(page);
-        if (issues.length > 0) {
-          await prisma.issue.createMany({
-            data: issues.map(issue => ({
-              pageId: page.id,
-              ruleCode: issue.ruleCode,
-              severity: issue.severity,
-              title: issue.title,
-              url: page.url,
-              evidence: issue.evidence,
-              recommendation: issue.recommendation
-            }))
-          });
-          await prisma.scan.update({
-            where: { id: scanId },
-            data: { issuesFound: { increment: issues.length } }
-          });
+      const isHtml200 = page.statusCode && page.statusCode >= 200 && page.statusCode < 300 && page.contentType?.includes('text/html');
+      
+      const allIssues = await evaluatePage(page);
+      const { rules } = require('../seo/rules');
+      const contentCategories = ['Content', 'Accessibility'];
+      
+      issues = allIssues.filter(issue => {
+        const ruleDef = rules.find((r: any) => r.code === issue.ruleCode);
+        if (ruleDef && contentCategories.includes(ruleDef.category)) {
+          return isHtml200; // Only keep content/accessibility issues if it's a successful HTML page
         }
+        return true; // Keep Technical rules like 404s, robots.txt, etc.
+      });
+
+      if (issues.length > 0) {
+        await prisma.issue.createMany({
+          data: issues.map(issue => ({
+            pageId: page.id,
+            ruleCode: issue.ruleCode,
+            severity: issue.severity,
+            title: issue.title,
+            url: page.url,
+            evidence: issue.evidence,
+            recommendation: issue.recommendation
+          }))
+        });
+        await prisma.scan.update({
+          where: { id: scanId },
+          data: { issuesFound: { increment: issues.length } }
+        });
       }
     }
   }
@@ -94,9 +104,8 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
              const catKey = cat.replace(/\s+/g, '');
              if (pageCatScores[catKey as keyof typeof pageCatScores] !== undefined) {
                // Stricter penalties to prevent artificially high scores
-               const isPro = scan.project.organization?.tier === 'PRO';
-               const warnPenalty = isPro ? 7.5 : 15;
-               const infoPenalty = isPro ? 2.5 : 5;
+               const warnPenalty = 15;
+               const infoPenalty = 5;
                const critPenalty = 30; // Criticals are always heavily penalized
 
                if (issue.severity === 'CRITICAL') pageCatScores[catKey as keyof typeof pageCatScores] -= critPenalty;
@@ -105,13 +114,12 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
              }
            }
            
-           const isPro = scan.project.organization?.tier === 'PRO';
-           const warnPenalty = isPro ? 7.5 : 15;
-           const infoPenalty = isPro ? 2.5 : 5;
+           const warnPenalty = 15;
+           const infoPenalty = 5;
            const critPenalty = 30;
            
-           // Pro users get a slight leniency boost
-           const baseScore = isPro ? 105 : 100;
+           // Standard objective base score
+           const baseScore = 100;
            const pageScore = Math.min(100, Math.max(0, baseScore - (pageCrit * critPenalty) - (pageWarn * warnPenalty) - (pageInfo * infoPenalty)));
            totalScore += pageScore;
            
@@ -121,13 +129,31 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
            }
          }
 
-         const overallScore = pages.length > 0 ? Math.round(totalScore / pages.length) : 0;
-         const technicalScore = catScores.Technical.count > 0 ? Math.round(catScores.Technical.total / catScores.Technical.count) : 0;
-         const contentScore = catScores.Content.count > 0 ? Math.round(catScores.Content.total / catScores.Content.count) : 0;
-         const indexabilityScore = catScores.Indexability.count > 0 ? Math.round(catScores.Indexability.total / catScores.Indexability.count) : 0;
-         const performanceScore = catScores.Performance.count > 0 ? Math.round(catScores.Performance.total / catScores.Performance.count) : 0;
-         const accessibilityScore = catScores.Accessibility.count > 0 ? Math.round(catScores.Accessibility.total / catScores.Accessibility.count) : 0;
-         const structuredDataScore = catScores.StructuredData.count > 0 ? Math.round(catScores.StructuredData.total / catScores.StructuredData.count) : 0;
+         let overallScore = pages.length > 0 ? Math.round(totalScore / pages.length) : 0;
+         let technicalScore = catScores.Technical.count > 0 ? Math.round(catScores.Technical.total / catScores.Technical.count) : 0;
+         let contentScore = catScores.Content.count > 0 ? Math.round(catScores.Content.total / catScores.Content.count) : 0;
+         let indexabilityScore = catScores.Indexability.count > 0 ? Math.round(catScores.Indexability.total / catScores.Indexability.count) : 0;
+         let performanceScore = catScores.Performance.count > 0 ? Math.round(catScores.Performance.total / catScores.Performance.count) : 0;
+         let accessibilityScore = catScores.Accessibility.count > 0 ? Math.round(catScores.Accessibility.total / catScores.Accessibility.count) : 0;
+         let structuredDataScore = catScores.StructuredData.count > 0 ? Math.round(catScores.StructuredData.total / catScores.StructuredData.count) : 0;
+
+         // Apply site-wide penalties to the final average score
+         const hasRobotsMissing = allIssues.some(i => i.ruleCode === 'ROBOTS_TXT_MISSING');
+         const hasSitemapMissing = allIssues.some(i => i.ruleCode === 'SITEMAP_MISSING');
+         let siteWidePenalty = 0;
+
+         if (hasRobotsMissing) {
+           siteWidePenalty += 25;
+           technicalScore = Math.max(0, technicalScore - 25);
+           indexabilityScore = Math.max(0, indexabilityScore - 25);
+         }
+         if (hasSitemapMissing) {
+           siteWidePenalty += 15;
+           technicalScore = Math.max(0, technicalScore - 15);
+           indexabilityScore = Math.max(0, indexabilityScore - 15);
+         }
+
+         overallScore = Math.max(0, overallScore - siteWidePenalty);
 
          const criticals = await prisma.issue.count({ where: { page: { scanId }, severity: 'CRITICAL' } });
          const warnings = await prisma.issue.count({ where: { page: { scanId }, severity: 'WARNING' } });

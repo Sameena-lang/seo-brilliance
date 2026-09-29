@@ -62,7 +62,7 @@ export const rules: SeoRule[] = [
     code: 'TITLE_DUPLICATE',
     name: 'Duplicate title tag',
     category: 'Content',
-    severity: 'WARNING',
+    severity: 'CRITICAL',
     whyItMatters: 'Duplicate titles confuse search engines about which page is most relevant for a given search query, potentially hurting rankings for both pages.',
     howToFix: 'Ensure every indexable page on your website has a completely unique <title> tag reflecting its specific content.',
     evaluate: async (page) => {
@@ -123,7 +123,7 @@ export const rules: SeoRule[] = [
     code: 'META_DESCRIPTION_DUPLICATE',
     name: 'Duplicate meta description',
     category: 'Content',
-    severity: 'WARNING',
+    severity: 'CRITICAL',
     whyItMatters: 'Using the same description across multiple pages looks like spam or low-quality content to search engines, and provides poor user experience in search snippets.',
     howToFix: 'Write unique meta descriptions for every single indexable page on your site.',
     evaluate: async (page) => {
@@ -204,6 +204,7 @@ export const rules: SeoRule[] = [
     howToFix: 'Add a self-referencing <link rel="canonical"> tag to the <head> of every indexable page.',
     example: '<link rel="canonical" href="https://www.example.com/page-url" />',
     evaluate: async (page) => {
+      if (page.statusCode !== 200 || !page.contentType?.includes('text/html')) return null;
       if (!page.canonicalUrl) {
         return { hasIssue: true, recommendation: 'Add a self-referencing canonical URL.' };
       }
@@ -219,6 +220,7 @@ export const rules: SeoRule[] = [
     howToFix: 'Review the page intent. If it should be in search results, remove the "noindex" directive from the meta robots tag or X-Robots-Tag HTTP header.',
     example: 'Remove: <meta name="robots" content="noindex">',
     evaluate: async (page) => {
+      if (page.statusCode !== 200 || !page.contentType?.includes('text/html')) return null;
       if (page.robotsDirectives && page.robotsDirectives.toLowerCase().includes('noindex')) {
         return { hasIssue: true, evidence: { directives: page.robotsDirectives }, recommendation: 'Remove noindex directive if this page should be indexed.' };
       }
@@ -233,6 +235,7 @@ export const rules: SeoRule[] = [
     whyItMatters: 'Invalid structured data (Schema.org) prevents search engines from parsing your rich snippets (like star ratings, prices, or FAQs) correctly.',
     howToFix: 'Validate your JSON-LD or Microdata using Google\'s Rich Results Test tool and fix the syntax or missing property errors.',
     evaluate: async (page) => {
+      if (page.statusCode !== 200 || !page.contentType?.includes('text/html')) return null;
       if (page.schemaErrors && page.schemaErrors.length > 0) {
         return { hasIssue: true, evidence: { errors: page.schemaErrors }, recommendation: 'Fix JSON-LD schema parsing errors.' };
       }
@@ -247,7 +250,7 @@ export const rules: SeoRule[] = [
     whyItMatters: 'Broken links create a poor user experience and waste search engine crawl budget. They signal that a site may be poorly maintained.',
     howToFix: 'Find the broken URL in your content and update it to a working URL, remove the link entirely, or implement a 301 redirect if the destination moved.',
     evaluate: async (page) => {
-      if (page.statusCode === 404) {
+      if (page.statusCode === 404 && !page.url.endsWith('/robots.txt') && !page.url.endsWith('/sitemap.xml')) {
         return { hasIssue: true, recommendation: 'Fix or remove links pointing to this broken page.' };
       }
       return null;
@@ -263,6 +266,34 @@ export const rules: SeoRule[] = [
     evaluate: async (page) => {
       if (page.statusCode && page.statusCode >= 300 && page.statusCode < 400) {
         return { hasIssue: true, evidence: { statusCode: page.statusCode }, recommendation: 'Update links to point directly to the final destination URL.' };
+      }
+      return null;
+    }
+  },
+  {
+    code: 'ROBOTS_TXT_MISSING',
+    name: 'robots.txt is missing',
+    category: 'Technical',
+    severity: 'CRITICAL',
+    whyItMatters: 'Without a robots.txt file, search engines may crawl pages you want to keep private, or you miss out on directing them to your sitemap.',
+    howToFix: 'Create a robots.txt file at the root directory of your website.',
+    evaluate: async (page) => {
+      if (page.url.endsWith('/robots.txt') && page.statusCode === 404) {
+        return { hasIssue: true, recommendation: 'Create a robots.txt file at the root of your domain.' };
+      }
+      return null;
+    }
+  },
+  {
+    code: 'SITEMAP_MISSING',
+    name: 'Sitemap is missing',
+    category: 'Technical',
+    severity: 'CRITICAL',
+    whyItMatters: 'An XML sitemap helps search engines discover all indexable pages on your site quickly.',
+    howToFix: 'Generate an XML sitemap and place it at the root of your website (sitemap.xml), then submit it to Search Console.',
+    evaluate: async (page) => {
+      if (page.url.endsWith('/sitemap.xml') && page.statusCode === 404) {
+        return { hasIssue: true, recommendation: 'Create a sitemap.xml file at the root of your domain.' };
       }
       return null;
     }

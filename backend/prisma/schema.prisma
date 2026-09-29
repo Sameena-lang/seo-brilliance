@@ -61,6 +61,7 @@ model User {
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   projects       Project[]
+  aiConversations AiConversation[]
 
   @@index([organizationId])
 }
@@ -80,6 +81,11 @@ model Project {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   scans          Scan[]
+  keywords       Keyword[]
+  competitors    Competitor[]
+  aiConversations AiConversation[]
+  integrationConnections IntegrationConnection[]
+  externalMetrics ExternalMetricSnapshot[]
 
   @@index([organizationId])
 }
@@ -254,12 +260,143 @@ model CoreWebVital {
   @@index([pageId])
 }
 
-model Integration {
+model IntegrationConnection {
   id             String       @id @default(uuid())
-  organizationId String       // We can relate to org if multi-tenant
-  provider       String
-  credentials    Json
-  status         String       @default("ACTIVE")
+  projectId      String
+  provider       String       // "search-console", "analytics", "pagespeed", "seo-provider", "mcp"
+  credentials    Json?        // Encrypted OAuth tokens or API keys
+  status         String       @default("CONNECTED") // CONNECTED, ERROR, NEEDS_REAUTH, DISCONNECTED
+  errorMessage   String?
+  lastSyncAt     DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  properties     IntegrationProperty[]
+  syncJobs       IntegrationSyncJob[]
+
+  @@unique([projectId, provider])
+  @@index([projectId])
+}
+
+model IntegrationProperty {
+  id             String       @id @default(uuid())
+  connectionId   String
+  propertyId     String       // e.g. "sc-domain:example.com", "ga4:123456"
+  name           String       // Display name
+  type           String       // "search-console", "analytics"
+  isActive       Boolean      @default(false)
+  config         Json?        // Additional configuration
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  connection     IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+}
+
+model IntegrationSyncJob {
+  id             String       @id @default(uuid())
+  connectionId   String
+  type           String       // "search-console-sync", "analytics-sync"
+  status         String       @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  startedAt      DateTime?
+  completedAt    DateTime?
+  error          String?
+  recordsProcessed Int        @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  connection     IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+}
+
+model ExternalMetricSnapshot {
+  id             String       @id @default(uuid())
+  projectId      String
+  provider       String
+  date           DateTime     @default(now())
+  metrics        Json         // e.g. { clicks, impressions, ctr, position, users, sessions }
+  createdAt      DateTime     @default(now())
+  
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, provider, date])
+}
+
+model Keyword {
+  id             String       @id @default(uuid())
+  projectId      String
+  term           String
+  url            String?
+  position       Int?
+  searchVolume   Int?
+  difficulty     Int?
+  clicks         Int?
+  impressions    Int?
+  ctr            Float?
+  change         Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model Competitor {
+  id             String       @id @default(uuid())
+  projectId      String
+  domain         String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model AiConversation {
+  id             String       @id @default(uuid())
+  userId         String
+  projectId      String
+  title          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages       AiMessage[]
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+model AiMessage {
+  id             String         @id @default(uuid())
+  conversationId String
+  role           String         // "user" | "model" | "system"
+  content        String
+  createdAt      DateTime       @default(now())
+
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+model AiUsage {
+  id             String       @id @default(uuid())
+  userId         String?
+  projectId      String?
+  model          String
+  requestType    String
+  inputTokens    Int          @default(0)
+  outputTokens   Int          @default(0)
+  durationMs     Int          @default(0)
+  success        Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  @@index([userId])
+  @@index([projectId])
 }

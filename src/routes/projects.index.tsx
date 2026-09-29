@@ -24,6 +24,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/projects/")({
   component: ProjectsListRoute,
@@ -125,26 +126,39 @@ function ProjectsListRoute() {
           </Button>
         </div>
 
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b border-border">
-                <tr className="text-left text-muted-foreground">
-                  <th className="px-6 py-4 font-medium">Domain</th>
-                  <th className="px-6 py-4 font-medium">SEO Score</th>
-                  <th className="px-6 py-4 font-medium hidden md:table-cell">Pages Crawled</th>
-                  <th className="px-6 py-4 font-medium hidden sm:table-cell">Issues</th>
-                  <th className="px-6 py-4 font-medium">Last Scan</th>
-                  <th className="px-6 py-4 text-right font-medium"></th>
+              <thead className="bg-muted/30 border-b border-border/50">
+                <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-6 py-4">Domain</th>
+                  <th className="px-6 py-4">SEO Score</th>
+                  <th className="px-6 py-4 hidden md:table-cell">Pages Crawled</th>
+                  <th className="px-6 py-4 hidden sm:table-cell">Issues</th>
+                  <th className="px-6 py-4">Last Scan</th>
+                  <th className="px-6 py-4 text-right"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/50">
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
-                      Loading projects...
-                    </td>
-                  </tr>
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="size-10 rounded-lg" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-16" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4"><Skeleton className="h-6 w-16" /></td>
+                      <td className="px-6 py-4 hidden md:table-cell"><Skeleton className="h-4 w-12" /></td>
+                      <td className="px-6 py-4 hidden sm:table-cell"><Skeleton className="h-5 w-12 rounded-full" /></td>
+                      <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                      <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></td>
+                    </tr>
+                  ))
                 ) : projects.map((project: any) => {
                   const lastScan = project.scans?.[0];
                   const score = lastScan?.siteScore?.overallScore || '-';
@@ -237,10 +251,14 @@ function ProjectsListRoute() {
             </table>
           </div>
           {!isLoading && projects.length === 0 && (
-            <div className="p-12 text-center">
-              <Folder className="mx-auto size-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">No projects yet</h3>
-              <p className="mt-2 text-sm text-muted-foreground">Get started by adding your first website to monitor.</p>
+            <div className="p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
+              <div className="rounded-full bg-primary/10 p-5 mb-4">
+                <Folder className="size-12 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold tracking-tight text-foreground">No projects yet</h3>
+              <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+                Add your first website and run an SEO audit to start discovering opportunities.
+              </p>
               <Button className="mt-6 shadow-md shadow-primary/20" onClick={() => setIsDialogOpen(true)}>
                 <Plus className="mr-2 size-4" />
                 Add your first project

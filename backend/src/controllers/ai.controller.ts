@@ -58,11 +58,27 @@ export const chat = async (req: Request, res: Response, next: NextFunction) => {
         // General scan context - REDUCED TO 3 ISSUES TO SAVE CONTEXT SIZE
         const topIssues = await prisma.issue.findMany({
           where: { page: { scanId } },
-          orderBy: [{ severity: 'asc' }],
+          orderBy: { severity: 'asc' },
           take: 3
         });
-        contextString += `Top 3 Issues on Site:\n${formatIssuesForPrompt(topIssues)}\n\n`;
+        contextString += `Top Issues on Site:\n${formatIssuesForPrompt(topIssues)}\n\n`;
       }
+
+      // Add External Integration Context
+      const externalMetrics = await prisma.externalMetricSnapshot.findMany({
+        where: { projectId: scan.projectId },
+        orderBy: { date: 'desc' },
+        distinct: ['provider']
+      });
+
+      if (externalMetrics.length > 0) {
+        contextString += `External Integration Data Available:\n`;
+        externalMetrics.forEach(m => {
+          contextString += `- ${m.provider.toUpperCase()} (${new Date(m.date).toLocaleDateString()}): ${m.metrics}\n`;
+        });
+        contextString += `\n`;
+      }
+
     }
 
     const systemPrompt = `You are a helpful, beginner-friendly SEO Assistant chatbot.
@@ -217,3 +233,112 @@ export const explainVoice = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
+import { issueExplanationPrompt } from '../ai/prompts/issueExplanation';
+import { titleGeneratorPrompt } from '../ai/prompts/titleGenerator';
+import { metaDescriptionPrompt } from '../ai/prompts/metaDescription';
+import { altTextPrompt } from '../ai/prompts/altText';
+
+const generateAiResponse = async (prompt: string, fallback: string) => {
+  if (!process.env.GEMINI_API_KEY) return fallback;
+  try {
+    const genAI = getGenAI();
+    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-3.6-flash' });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    console.error("AI Generation Error:", error);
+    return fallback;
+  }
+};
+
+export const explainIssue = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { issueContext } = req.body;
+    const prompt = issueExplanationPrompt(issueContext);
+    const result = await generateAiResponse(prompt, "AI analysis is temporarily unavailable.");
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateTitle = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { url, title, content } = req.body;
+    const prompt = titleGeneratorPrompt(url, title, content);
+    let result = await generateAiResponse(prompt, '[{"title": "AI analysis is temporarily unavailable.", "characterCount": 0, "reason": "Fallback"}]');
+    
+    try {
+      result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(result);
+      res.status(200).json({ success: true, data: parsed });
+    } catch {
+      res.status(200).json({ success: true, data: [{ title: "AI analysis is temporarily unavailable.", characterCount: 0, reason: "Parsing failed" }] });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateMetaDescription = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { url, title, description, content } = req.body;
+    const prompt = metaDescriptionPrompt(url, title, description, content);
+    let result = await generateAiResponse(prompt, '[{"description": "AI analysis is temporarily unavailable.", "characterCount": 0, "reason": "Fallback"}]');
+    
+    try {
+      result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(result);
+      res.status(200).json({ success: true, data: parsed });
+    } catch {
+      res.status(200).json({ success: true, data: [{ description: "AI analysis is temporarily unavailable.", characterCount: 0, reason: "Parsing failed" }] });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateAltText = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { imageUrl, filename, pageTitle, context } = req.body;
+    const prompt = altTextPrompt(imageUrl, filename, pageTitle, context);
+    let result = await generateAiResponse(prompt, '{"altText": "More context needed", "reason": "Fallback"}');
+    
+    try {
+      result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(result);
+      res.status(200).json({ success: true, data: parsed });
+    } catch {
+      res.status(200).json({ success: true, data: { altText: "More context needed", reason: "Parsing failed" } });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+import { contentAnalysisPrompt } from '../ai/prompts/contentAnalysis';
+import { actionPlanPrompt } from '../ai/prompts/actionPlan';
+
+export const analyzeContent = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { url, title, headings, contentSummary } = req.body;
+    const prompt = contentAnalysisPrompt(url, title, headings, contentSummary);
+    const result = await generateAiResponse(prompt, "AI analysis is temporarily unavailable.");
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateActionPlan = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { issuesContext } = req.body;
+    const prompt = actionPlanPrompt(issuesContext);
+    const result = await generateAiResponse(prompt, "AI analysis is temporarily unavailable.");
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+

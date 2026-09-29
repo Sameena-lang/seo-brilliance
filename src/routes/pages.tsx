@@ -216,9 +216,9 @@ function PagesRoute() {
                 ) : pages.map((page: any) => (
                   <tr key={page.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs truncate max-w-[200px] sm:max-w-[300px]">
-                      <a href={page.url} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary" title={page.url}>
+                      <Link to="/pages/$pageId" params={{ pageId: page.id }} className="hover:underline text-primary" title={page.url}>
                         {page.url}
-                      </a>
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={page.statusCode === 200 ? "outline" : (page.statusCode >= 400 || !page.statusCode) ? "destructive" : "secondary"} className={page.statusCode === 200 ? "text-success border-success/30 bg-success/10" : ""}>

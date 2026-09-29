@@ -14,4 +14,14 @@ router.get('/:id', projectController.getById);
 router.put('/:id', validate(updateProjectSchema), projectController.update);
 router.delete('/:id', projectController.remove);
 
+router.get('/:id/health', projectController.getHealth);
+router.get('/:id/opportunities', projectController.getOpportunities);
+router.get('/:id/history', projectController.getHistory);
+router.get('/:id/keywords', projectController.getKeywords);
+router.post('/:id/keywords', projectController.addKeyword);
+router.get('/:id/competitors', projectController.getCompetitors);
+router.post('/:id/competitors', projectController.addCompetitor);
+router.get('/:id/search-console', projectController.getSearchConsoleMetrics);
+router.get('/:id/analytics', projectController.getAnalyticsMetrics);
+
 export default router;

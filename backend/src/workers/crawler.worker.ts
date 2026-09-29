@@ -47,9 +47,20 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
   if (currentDepth === 0) {
     await prisma.scan.update({
       where: { id: scanId },
-      data: { status: 'RUNNING', startedAt: new Date() }
+      data: { status: 'RUNNING', startedAt: new Date(), pagesDiscovered: { increment: 2 } }
     });
     console.log(`[Worker] Updated scan ${scanId} to RUNNING`);
+    
+    try {
+      const rootUrlObj = new URL(url);
+      const rootOrigin = rootUrlObj.origin;
+      import('../queues').then(q => {
+        q.crawlQueue.add('startCrawl', { scanId, projectId, url: `${rootOrigin}/robots.txt`, settings, currentDepth: 1 });
+        q.crawlQueue.add('startCrawl', { scanId, projectId, url: `${rootOrigin}/sitemap.xml`, settings, currentDepth: 1 });
+      });
+    } catch (e) {
+      console.error('Failed to queue robots/sitemap', e);
+    }
   }
 
   // Ensure URL is safe
@@ -253,7 +264,7 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
 
   } catch (error: any) {
     const status = error.response?.status || 0;
-    await prisma.page.create({
+    const page = await prisma.page.create({
       data: {
         scanId,
         url,
@@ -272,7 +283,7 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
       data: { scanId, url, message: `Failed to crawl: ${error.message}`, level: 'ERROR' }
     });
 
-    await seoQueue.add('analyzeSeo', { scanId });
+    await seoQueue.add('analyzeSeo', { scanId, pageId: page.id });
   }
 });
 

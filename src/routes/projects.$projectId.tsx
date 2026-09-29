@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { ProjectIntegrations } from "@/components/project-integrations";
 import {
   BarChart,
   Bar,
@@ -19,7 +20,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
+  LineChart,
+  Line
 } from "recharts";
 
 export const Route = createFileRoute("/projects/$projectId")({
@@ -41,6 +44,13 @@ function ProjectDetailsRoute() {
     queryKey: ['project', projectId],
     queryFn: () => api.get(`/projects/${projectId}`).then(res => res.data),
   });
+
+  const { data: historyRes } = useQuery({
+    queryKey: ['project-history', projectId],
+    queryFn: () => api.get(`/projects/${projectId}/history`).then(res => res.data),
+  });
+  
+  const history = Array.isArray(historyRes) ? historyRes : (historyRes?.data || []);
 
   const domain = project?.domain || "Loading...";
   const latestScan = project?.scans?.[0];
@@ -156,6 +166,8 @@ function ProjectDetailsRoute() {
           </div>
         </div>
 
+        <ProjectIntegrations projectId={projectId} />
+
         {scanDetails ? (
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="mb-4 bg-muted/50">
@@ -165,6 +177,33 @@ function ProjectDetailsRoute() {
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">
+              
+              {history && history.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><BarChart2 className="size-4 text-muted-foreground" /> SEO Score Trend</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={history} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis 
+                          dataKey="date" 
+                          tickFormatter={(val) => new Date(val).toLocaleDateString()}
+                          tick={{ fontSize: 12 }} 
+                        />
+                        <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                        <Tooltip 
+                          labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                        />
+                        <Legend />
+                        <Line type="monotone" dataKey="score" name="SEO Score" stroke={COLORS.info} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className="grid gap-6 md:grid-cols-2">
                 <Card>
                   <CardHeader>

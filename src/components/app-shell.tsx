@@ -11,7 +11,12 @@ import {
   Search,
   Settings,
   TriangleAlert,
-  Bot
+  Bot,
+  Activity,
+  Target,
+  Users,
+  Sparkles,
+  BarChart3
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Brand } from "@/components/brand";
@@ -35,17 +40,55 @@ import { useAuth } from "@/hooks/use-auth";
 import { AiChatAssistant } from "./ai-chat-assistant";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useLatestScan } from "@/hooks/use-latest-scan";
+import { CommandPalette } from "@/components/command-palette";
 
-const nav = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/projects", label: "Projects", icon: Folder },
-  { to: "/scan", label: "New Scan", icon: Radar },
-  { to: "/scan/results", label: "Audit Results", icon: FileBarChart },
-  { to: "/issues", label: "Issues", icon: TriangleAlert },
-  { to: "/pages", label: "Pages", icon: FileText },
-  { to: "/reports", label: "Reports", icon: FileBarChart },
-  { to: "/settings", label: "Settings", icon: Settings },
-] as const;
+const navGroups = [
+  {
+    label: "Overview",
+    items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+  },
+  {
+    label: "SEO Intelligence",
+    items: [
+      { to: "/seo-health", label: "Health Center", icon: Activity },
+      { to: "/opportunities", label: "Opportunities", icon: Target },
+      { to: "/keywords", label: "Keywords", icon: Search },
+      { to: "/competitors", label: "Competitors", icon: Users },
+    ],
+  },
+  {
+    label: "AI Assistant",
+    items: [
+      { to: "/ai-copilot", label: "AI Copilot", icon: Bot },
+      { to: "/ai-action-plan", label: "AI Action Plan", icon: Sparkles },
+    ],
+  },
+  {
+    label: "SEO Management",
+    items: [
+      { to: "/projects", label: "Projects", icon: Folder },
+      { to: "/scan", label: "New Scan", icon: Radar },
+      { to: "/scan/results", label: "Audit Results", icon: FileBarChart },
+      { to: "/issues", label: "Issues", icon: TriangleAlert },
+      { to: "/pages", label: "Pages", icon: FileText },
+    ],
+  },
+  {
+    label: "Reporting",
+    items: [
+      { to: "/reports", label: "Reports", icon: FileBarChart },
+      { to: "/search-console", label: "Search Console", icon: Search },
+      { to: "/analytics", label: "Analytics", icon: BarChart3 }
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { to: "/integrations", label: "Integrations", icon: Settings },
+      { to: "/settings", label: "Settings", icon: Settings }
+    ],
+  },
+];
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -60,31 +103,38 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <nav className="flex flex-col gap-1" aria-label="Main">
-      <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        Workspace
-      </p>
-      {nav.map((item) => {
-        const isScanPage = item.to === "/scan";
-        const active = pathname === item.to || (!isScanPage && pathname.startsWith(`${item.to}/`));
-        return (
-          <Link
-            key={item.to}
-            to={item.to}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              active
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            <item.icon className="size-4" />
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav className="flex flex-col gap-6" aria-label="Main">
+      {navGroups.map((group) => (
+        <div key={group.label} className="flex flex-col gap-1">
+          <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            {group.label}
+          </p>
+          {group.items.map((item) => {
+            const isScanPage = item.to === "/scan";
+            const active = pathname === item.to || (!isScanPage && pathname.startsWith(`${item.to}/`));
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <item.icon className={cn(
+                  "size-4 transition-colors", 
+                  active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                )} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
       
       <div className="mt-4 px-3">
         <Button 
@@ -120,18 +170,21 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[248px_1fr]">
-      <aside className="sticky top-0 hidden h-screen flex-col border-r border-sidebar-border bg-sidebar p-4 lg:flex">
-        <Brand to="/" className="px-1 py-2" />
-        <div className="mt-6 flex-1">
+      <aside className="sticky top-0 hidden h-screen flex-col border-r border-sidebar-border bg-sidebar/50 backdrop-blur-xl p-4 lg:flex">
+        <Brand to="/" className="px-2 py-3 mb-4" />
+        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
           <SidebarNav />
         </div>
-        <div className="rounded-xl border border-border bg-primary/5 p-4">
-          <p className="text-sm font-semibold">Growth plan</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+        <div className="mt-4 rounded-xl border border-border bg-background p-4 shadow-sm">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <span className="size-2 rounded-full bg-primary animate-pulse-dot" />
+            Growth plan
+          </p>
+          <p className="mt-1.5 text-xs text-muted-foreground">
             18,240 of 25,000 pages used this month.
           </p>
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-            <div className="h-full w-[73%] rounded-full bg-primary" />
+            <div className="h-full w-[73%] rounded-full bg-primary transition-all duration-1000" />
           </div>
         </div>
       </aside>
@@ -156,26 +209,9 @@ export function AppShell({
 
             <ProjectSelector />
 
-            <form 
-              className="relative ml-auto hidden max-w-xs flex-1 md:block" 
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.target as HTMLFormElement;
-                const input = form.elements.namedItem("search") as HTMLInputElement;
-                if (input.value) {
-                  router.navigate({ to: "/pages", search: { search: input.value } });
-                }
-              }}
-            >
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                name="search"
-                type="search"
-                placeholder="Search pages, issues, domains…"
-                aria-label="Search"
-                className="pl-9 bg-background"
-              />
-            </form>
+            <div className="relative ml-auto hidden max-w-xs flex-1 md:flex md:justify-end">
+              <CommandPalette />
+            </div>
 
             <div className="ml-auto flex items-center gap-1 md:ml-0">
               <ThemeToggle />
@@ -248,17 +284,19 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="font-display text-2xl font-bold tracking-tight sm:text-[28px]">
+        <main className="flex-1 px-4 py-8 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-1.5">
+              <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
                 {title}
               </h1>
-              {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+              {description && <p className="text-sm text-muted-foreground max-w-2xl">{description}</p>}
             </div>
-            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+            {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
           </div>
-          {children}
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {children}
+          </div>
         </main>
       </div>
       <AiChatAssistant />

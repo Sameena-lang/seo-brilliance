@@ -7,10 +7,59 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useState } from "react";
+import ReactMarkdown from 'react-markdown';
 
 export const Route = createFileRoute("/issues/$issueId")({
   component: IssueDetailsRoute,
 });
+
+function AIExplanationCard({ issue }: { issue: any }) {
+  const [explanation, setExplanation] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleExplain = async () => {
+    setIsGenerating(true);
+    try {
+      const issueContext = `Title: ${issue.title}\nSeverity: ${issue.severity}\nRule: ${issue.ruleCode}\nURL: ${issue.page?.url}`;
+      const res = await api.post('/ai/explain-issue', { issueContext });
+      setExplanation(res.data?.data || "Failed to analyze.");
+    } catch (e) {
+      setExplanation("AI analysis is temporarily unavailable.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  if (!explanation && !isGenerating) {
+    return (
+      <Button variant="outline" onClick={handleExplain} className="w-full gap-2 mt-4 bg-muted/50 border-primary/20 hover:border-primary/50 text-primary">
+        <Sparkles className="size-4" /> Explain with AI
+      </Button>
+    );
+  }
+
+  return (
+    <Card className="mt-4 border-primary/20 shadow-sm bg-primary/5">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-primary">
+          <Bot className="size-5" /> AI Explanation
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isGenerating ? (
+          <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
+            <Sparkles className="size-4" /> Analyzing issue...
+          </div>
+        ) : (
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown>{explanation}</ReactMarkdown>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function IssueDetailsRoute() {
   const { issueId } = Route.useParams();
@@ -168,6 +217,8 @@ function IssueDetailsRoute() {
                 </CardContent>
               </Card>
             )}
+
+            <AIExplanationCard issue={issue} />
           </div>
 
           <Card>
