@@ -12,7 +12,7 @@ const httpsAgent = new https.Agent({ keepAlive: true });
 const axiosClient = axios.create({
   httpAgent,
   httpsAgent,
-  timeout: 10000,
+  timeout: 30000, // Increased timeout to 30s to handle slow sites without exhausting queue
   headers: { 'User-Agent': 'SEO-Intelligence-Bot/1.0' },
   maxRedirects: 0,
   maxContentLength: 5 * 1024 * 1024,
@@ -258,7 +258,7 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
       where: { id: scanId },
       data: {
         pagesCrawled: { increment: 1 },
-        pagesDiscovered: { increment: newlyDiscovered - extracted.internalLinks.length }, 
+        pagesDiscovered: { increment: newlyDiscovered }, 
       }
     });
 
