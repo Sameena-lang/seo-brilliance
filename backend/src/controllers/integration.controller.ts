@@ -4,9 +4,9 @@ import prisma from '../config/db';
 
 export const getStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const providerName = req.params.provider;
+    const providerName = req.params.provider as string;
     const provider = integrationManager.getProvider(providerName);
-    const status = await provider.getStatus(req.params.projectId);
+    const status = await provider.getStatus(req.params.projectId as string);
     res.status(200).json({ success: true, data: status });
   } catch (error: any) {
     next(error);
@@ -15,9 +15,9 @@ export const getStatus = async (req: Request, res: Response, next: NextFunction)
 
 export const connect = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const providerName = req.params.provider;
+    const providerName = req.params.provider as string;
     const provider = integrationManager.getProvider(providerName);
-    const authUrl = provider.getAuthUrl(req.params.projectId, req.user.organizationId);
+    const authUrl = provider.getAuthUrl(req.params.projectId as string, req.user.organizationId as string);
     res.status(200).json({ success: true, data: { authUrl } });
   } catch (error: any) {
     next(error);
@@ -26,9 +26,9 @@ export const connect = async (req: Request, res: Response, next: NextFunction) =
 
 export const getProperties = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const providerName = req.params.provider;
+    const providerName = req.params.provider as string;
     const provider = integrationManager.getProvider(providerName);
-    const properties = await provider.getProperties(req.params.projectId);
+    const properties = await provider.getProperties(req.params.projectId as string);
     res.status(200).json({ success: true, data: properties });
   } catch (error: any) {
     next(error);
@@ -37,7 +37,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
 
 export const selectProperty = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const providerName = req.params.provider;
+    const providerName = req.params.provider as string;
     const { propertyId, propertyName } = req.body;
     
     if (!propertyId || !propertyName) {
@@ -45,7 +45,7 @@ export const selectProperty = async (req: Request, res: Response, next: NextFunc
     }
 
     const provider = integrationManager.getProvider(providerName);
-    await provider.selectProperty(req.params.projectId, propertyId, propertyName);
+    await provider.selectProperty(req.params.projectId as string, propertyId as string, propertyName);
     res.status(200).json({ success: true });
   } catch (error: any) {
     next(error);
@@ -54,12 +54,12 @@ export const selectProperty = async (req: Request, res: Response, next: NextFunc
 
 export const syncData = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const providerName = req.params.provider;
+    const providerName = req.params.provider as string;
     const provider = integrationManager.getProvider(providerName);
     
     // Non-blocking background sync triggered here conceptually
     // We await it here for simplicity but it could be dispatched to BullMQ
-    const result = await provider.syncData(req.params.projectId);
+    const result = await provider.syncData(req.params.projectId as string);
     res.status(200).json({ success: true, data: result });
   } catch (error: any) {
     next(error);
@@ -68,9 +68,9 @@ export const syncData = async (req: Request, res: Response, next: NextFunction) 
 
 export const disconnect = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const providerName = req.params.provider;
+    const providerName = req.params.provider as string;
     const provider = integrationManager.getProvider(providerName);
-    await provider.disconnect(req.params.projectId);
+    await provider.disconnect(req.params.projectId as string);
     res.status(200).json({ success: true });
   } catch (error: any) {
     next(error);

@@ -42,7 +42,7 @@ function AICopilotRoute() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/chat`, {
+      const response = await fetch(`${import.meta.env['VITE_API_URL']}/api/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ function AICopilotRoute() {
                 aiResponse += data.text;
                 setMessages(prev => {
                   const newMsgs = [...prev];
-                  newMsgs[newMsgs.length - 1].content = aiResponse;
+                  newMsgs[newMsgs.length - 1]!.content = aiResponse;
                   return newMsgs;
                 });
               } else if (data.error) {

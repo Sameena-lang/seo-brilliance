@@ -56,7 +56,7 @@ export function VoicePlayer({ scanId, issueId, className, label = "Listen" }: Vo
     try {
       setIsLoading(true);
       
-      const response = await api.post('/ai/voice', { scanId, issueId }, { responseType: 'blob' });
+      const response = await api.post('/ai/voice', { scanId, issueId }, { responseType: 'blob' }) as any;
       
       // Check if it's a JSON response (fallback)
       if (response.type === 'application/json') {

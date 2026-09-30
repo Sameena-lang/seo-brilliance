@@ -12,7 +12,7 @@ export const Route = createFileRoute("/checkout")({
   component: CheckoutRoute,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      plan: search.plan as string || "pro",
+      plan: search['plan'] as string || "pro",
     }
   }
 });

@@ -320,12 +320,12 @@ function ProjectSelector() {
     // Clear project-specific params when switching projects globally
     router.navigate({
       to: router.state.location.pathname as any,
-      search: (prev: any) => {
+      search: ((prev: any) => {
         const newSearch = { ...prev };
         delete newSearch.scanId;
         delete newSearch.projectId;
         return newSearch;
-      }
+      }) as any
     });
   };
 
