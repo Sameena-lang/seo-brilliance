@@ -117,7 +117,7 @@ ${contextString}
     try {
       const genAI = getGenAI();
       const model = genAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+        model: process.env.GEMINI_MODEL || 'gemini-flash-lite-latest',
         systemInstruction: systemPrompt,
       });
 
@@ -252,9 +252,9 @@ const generateAiResponse = async (prompt: string, fallback: string) => {
       const result = await model.generateContent(prompt);
       return result.response.text();
     } catch (e: any) {
-      if (e.status === 404) {
-        console.log("Model not found, falling back to gemini-flash-latest");
-        const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+      if (e.status === 404 || e.status === 503) {
+        console.log("Model unavailable, falling back to gemini-flash-lite-latest");
+        const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
         const result = await fallbackModel.generateContent(prompt);
         return result.response.text();
       }

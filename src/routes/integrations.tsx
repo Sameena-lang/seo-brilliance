@@ -64,8 +64,8 @@ function IntegrationsRoute() {
   const connectMutation = useMutation({
     mutationFn: (providerId: string) => api.post(`/integrations/${activeProjectId}/${providerId}/connect`),
     onSuccess: (data: any) => {
-      if (data.authUrl) {
-        window.location.href = data.authUrl;
+      if (data.data?.authUrl) {
+        window.location.href = data.data.authUrl;
       }
     },
     onError: (err: any) => toast.error(`Failed to connect: ${err.message}`)

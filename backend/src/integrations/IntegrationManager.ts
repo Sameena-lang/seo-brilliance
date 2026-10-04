@@ -3,6 +3,7 @@ import { GoogleSearchConsoleProvider } from './search-console/GoogleSearchConsol
 import { GoogleAnalyticsProvider } from './analytics/GoogleAnalyticsProvider';
 import { GooglePageSpeedProvider } from './pagespeed/GooglePageSpeedProvider';
 import { GenericSeoProvider } from './seo-data/GenericSeoProvider';
+import { McpProvider } from './mcp/McpProvider';
 
 class IntegrationManager {
   private providers: Map<string, IntegrationProvider> = new Map();
@@ -12,6 +13,7 @@ class IntegrationManager {
     this.registerProvider(new GoogleAnalyticsProvider());
     this.registerProvider(new GooglePageSpeedProvider());
     this.registerProvider(new GenericSeoProvider());
+    this.registerProvider(new McpProvider());
   }
 
   registerProvider(provider: IntegrationProvider) {

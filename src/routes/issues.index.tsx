@@ -29,7 +29,19 @@ function IssuesRoute() {
     refetchInterval: 5000,
   });
 
-  const issues = issuesRes?.issues || [];
+  let issues = issuesRes?.issues || [];
+
+  if (search?.category) {
+    const targetCat = search.category.toLowerCase();
+    issues = issues.filter((issue: any) => {
+      let catKey = 'Technical';
+      if (!issue.ruleCode) return true;
+      if (issue.ruleCode.includes('TITLE') || issue.ruleCode.includes('META') || issue.ruleCode.includes('H1') || issue.ruleCode.includes('WORD_COUNT')) catKey = 'Content';
+      else if (issue.ruleCode.includes('INDEX') || issue.ruleCode.includes('CANONICAL') || issue.ruleCode.includes('ROBOTS')) catKey = 'Indexability';
+      
+      return catKey.toLowerCase() === targetCat;
+    });
+  }
 
   return (
     <AppShell

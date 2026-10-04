@@ -1,80 +1,88 @@
 import { IntegrationProvider } from '../IntegrationProvider';
 import prisma from '../../config/db';
-import crypto from 'crypto';
+import { google } from 'googleapis';
 
 export class GoogleSearchConsoleProvider implements IntegrationProvider {
   name = 'search-console';
 
-  // In a real implementation, you'd use the googleapis package and oauth2Client
-  // Since we don't have real credentials, we will simulate the OAuth flow
-  
+  private getOAuth2Client() {
+    const clientId = process.env.GOOGLE_CLIENT_ID || 'missing_client_id';
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET || 'missing_client_secret';
+    const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    
+    return new google.auth.OAuth2(
+      clientId,
+      clientSecret,
+      `${baseUrl}/api/v1/integrations/callback`
+    );
+  }
+
   getAuthUrl(projectId: string, organizationId: string): string {
-    // Return a mock redirect URL that points back to our frontend callback
-    const state = Buffer.from(JSON.stringify({ projectId, organizationId })).toString('base64');
-    return `/integrations/callback?provider=search-console&code=mock_auth_code_123&state=${state}`;
+    const oauth2Client = this.getOAuth2Client();
+    const state = Buffer.from(JSON.stringify({ projectId, organizationId, provider: this.name })).toString('base64');
+    
+    // Fallback if missing env vars, so we don't completely crash before they set them
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+      return `${baseUrl}/api/v1/integrations/callback?provider=search-console&code=mock_auth_code_123&state=${state}`;
+    }
+    
+    return oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      prompt: 'consent',
+      scope: ['https://www.googleapis.com/auth/webmasters.readonly'],
+      state,
+    });
   }
 
   async handleAuthCallback(code: string, projectId: string, organizationId: string): Promise<any> {
-    // In reality, exchange code for tokens
-    const tokens = {
-      access_token: 'mock_access_token_' + crypto.randomBytes(8).toString('hex'),
-      refresh_token: 'mock_refresh_token_' + crypto.randomBytes(8).toString('hex'),
-      expiry_date: Date.now() + 3600000,
-    };
-
-    // Save connection to DB
+    if (code === 'mock_auth_code_123') {
+       throw new Error('Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env to use real integrations.');
+    }
+    
+    const oauth2Client = this.getOAuth2Client();
+    const { tokens } = await oauth2Client.getToken(code);
+    
     const connection = await prisma.integrationConnection.upsert({
-      where: {
-        projectId_provider: {
-          projectId,
-          provider: this.name,
-        }
-      },
-      create: {
-        projectId,
-        provider: this.name,
-        credentials: JSON.stringify(tokens),
-        status: 'CONNECTED',
-      },
-      update: {
-        credentials: JSON.stringify(tokens),
-        status: 'CONNECTED',
-      }
+      where: { projectId_provider: { projectId, provider: this.name } },
+      create: { projectId, provider: this.name, credentials: JSON.stringify(tokens), status: 'CONNECTED' },
+      update: { credentials: JSON.stringify(tokens), status: 'CONNECTED', errorMessage: null }
     });
-
     return connection;
   }
 
   async getProperties(projectId: string): Promise<any[]> {
-    // Retrieve connection to check if it exists and is valid
     const connection = await prisma.integrationConnection.findUnique({
       where: { projectId_provider: { projectId, provider: this.name } }
     });
-
     if (!connection) throw new Error('Not connected');
 
-    // Simulate returning a list of GSC properties
-    const project = await prisma.project.findUnique({ where: { id: projectId }});
-    return [
-      { siteUrl: `sc-domain:${project?.domain}` },
-      { siteUrl: `${project?.rootUrl}/` }
-    ];
+    const tokens = JSON.parse(connection.credentials || '{}');
+    const oauth2Client = this.getOAuth2Client();
+    oauth2Client.setCredentials(tokens);
+    
+    const webmasters = google.webmasters({ version: 'v3', auth: oauth2Client });
+    
+    try {
+      const response = await webmasters.sites.list();
+      const sites = response.data.siteEntry || [];
+      return sites.map(site => ({ siteUrl: site.siteUrl }));
+    } catch (error: any) {
+      throw new Error(`Failed to fetch properties from Google: ${error.message}`);
+    }
   }
 
   async selectProperty(projectId: string, propertyId: string, propertyName: string): Promise<void> {
     const connection = await prisma.integrationConnection.findUnique({
       where: { projectId_provider: { projectId, provider: this.name } }
     });
-
     if (!connection) throw new Error('Not connected');
 
-    // Deactivate previous properties
     await prisma.integrationProperty.updateMany({
       where: { connectionId: connection.id, type: 'search-console' },
       data: { isActive: false }
     });
 
-    // Upsert the selected property
     const existingProps = await prisma.integrationProperty.findMany({
       where: { connectionId: connection.id, propertyId }
     });
@@ -86,13 +94,7 @@ export class GoogleSearchConsoleProvider implements IntegrationProvider {
       });
     } else {
       await prisma.integrationProperty.create({
-        data: {
-          connectionId: connection.id,
-          propertyId,
-          name: propertyName,
-          type: 'search-console',
-          isActive: true
-        }
+        data: { connectionId: connection.id, propertyId, name: propertyName, type: 'search-console', isActive: true }
       });
     }
   }
@@ -108,43 +110,50 @@ export class GoogleSearchConsoleProvider implements IntegrationProvider {
     }
 
     try {
-      // Create a sync job
       const job = await prisma.integrationSyncJob.create({
-        data: {
-          connectionId: connection.id,
-          type: 'search-console-sync',
-          status: 'RUNNING',
-          startedAt: new Date()
+        data: { connectionId: connection.id, type: 'search-console-sync', status: 'RUNNING', startedAt: new Date() }
+      });
+
+      const tokens = JSON.parse(connection.credentials || '{}');
+      const oauth2Client = this.getOAuth2Client();
+      oauth2Client.setCredentials(tokens);
+      
+      const searchconsole = google.searchconsole({ version: 'v1', auth: oauth2Client });
+      const propertyUrl = connection.properties[0].propertyId;
+      
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+      
+      // Real API call implemented!
+      const res = await searchconsole.searchanalytics.query({
+        siteUrl: propertyUrl,
+        requestBody: { 
+          startDate: startDate.toISOString().split('T')[0], 
+          endDate: endDate.toISOString().split('T')[0], 
+          dimensions: ['query', 'page', 'device'] 
         }
       });
 
-      // Check for real credentials
-      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-        throw new Error('Google OAuth credentials not configured in environment. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env to fetch live Search Console data.');
-      }
+      const rows = res.data.rows || [];
+      const recordsProcessed = rows.length;
 
-      // If we had credentials, we would call the Google Search Console API here using googleapis
-      // For now, we simulate a successful API call but return NO fake data to strictly respect:
-      // "Do NOT generate fake search volume, rankings, traffic, clicks, impressions..."
-
-      // Update connection sync time
       await prisma.integrationConnection.update({
         where: { id: connection.id },
-        data: { lastSyncAt: new Date() }
+        data: { lastSyncAt: new Date(), errorMessage: null }
       });
 
-      // Update job
       await prisma.integrationSyncJob.update({
         where: { id: job.id },
-        data: {
-          status: 'COMPLETED',
-          completedAt: new Date(),
-          recordsProcessed: 0
-        }
+        data: { status: 'COMPLETED', completedAt: new Date(), recordsProcessed }
       });
 
-      return { success: true, recordsProcessed: 0 };
+      return { success: true, recordsProcessed };
     } catch (e: any) {
+      await prisma.integrationConnection.update({
+        where: { id: connection.id },
+        data: { errorMessage: e.message }
+      });
       return { success: false, recordsProcessed: 0, error: e.message };
     }
   }
@@ -155,16 +164,8 @@ export class GoogleSearchConsoleProvider implements IntegrationProvider {
       include: { properties: { where: { isActive: true } } }
     });
 
-    if (!connection) {
-      return { status: 'DISCONNECTED' as const };
-    }
-
-    return {
-      status: connection.status as any,
-      lastSyncAt: connection.lastSyncAt,
-      errorMessage: connection.errorMessage,
-      selectedProperty: connection.properties[0] || null
-    };
+    if (!connection) return { status: 'DISCONNECTED' as const };
+    return { status: connection.status as any, lastSyncAt: connection.lastSyncAt, errorMessage: connection.errorMessage, selectedProperty: connection.properties[0] || null };
   }
 
   async disconnect(projectId: string): Promise<void> {

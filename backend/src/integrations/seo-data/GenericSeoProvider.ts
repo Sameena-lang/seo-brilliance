@@ -6,7 +6,8 @@ export class GenericSeoProvider implements IntegrationProvider {
 
   getAuthUrl(projectId: string, organizationId: string): string {
     const state = Buffer.from(JSON.stringify({ projectId, organizationId })).toString('base64');
-    return `/integrations/callback?provider=${this.name}&code=seo_api_key_123&state=${state}`;
+    const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    return `${baseUrl}/api/v1/integrations/callback?provider=${this.name}&code=seo_api_key_123&state=${state}`;
   }
 
   async handleAuthCallback(code: string, projectId: string, organizationId: string): Promise<any> {

@@ -31,6 +31,7 @@ app.use(cors({
       allowedOrigins.includes(origin) ||
       /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
       /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
+      /^https?:\/\/(10|192\.168|172\.(1[6-9]|2[0-9]|3[0-1]))\.\d+\.\d+\.\d+(:\d+)?$/.test(origin) ||
       /^https:\/\/[a-zA-Z0-9-]+(-[a-zA-Z0-9]+)*\.vercel\.app$/.test(origin)
     ) {
       return callback(null, true);
