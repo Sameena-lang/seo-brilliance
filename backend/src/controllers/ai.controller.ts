@@ -117,7 +117,7 @@ ${contextString}
     try {
       const genAI = getGenAI();
       const model = genAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+        model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
         systemInstruction: systemPrompt,
       });
 
@@ -245,11 +245,23 @@ const generateAiResponse = async (prompt: string, fallback: string) => {
   if (!process.env.GEMINI_API_KEY) return fallback;
   try {
     const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-3.6-flash' });
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-  } catch (error) {
-    console.error("AI Generation Error:", error);
+    let modelName = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+    
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    } catch (e: any) {
+      if (e.status === 404) {
+        console.log("Model not found, falling back to gemini-flash-latest");
+        const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+        const result = await fallbackModel.generateContent(prompt);
+        return result.response.text();
+      }
+      throw e;
+    }
+  } catch (error: any) {
+    console.error("AI Generation Error:", error.message || error);
     return fallback;
   }
 };

@@ -93,6 +93,7 @@ import subscriptionRoutes from './routes/subscription.routes';
 import aiRoutes from './routes/ai.routes';
 import paymentRoutes from './routes/payment.routes';
 import integrationRoutes from './routes/integration.routes';
+import feedbackRoutes from './routes/feedback.routes';
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/projects', projectRoutes);
@@ -108,6 +109,7 @@ app.use('/api/v1/subscription', subscriptionRoutes);
 app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/payment', paymentRoutes);
 app.use('/api/v1/integrations', integrationRoutes);
+app.use('/api/v1/feedback', feedbackRoutes);
 import prisma from './config/db';
 import './workers';
 

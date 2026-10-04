@@ -23,7 +23,7 @@ function AIExplanationCard({ issue }: { issue: any }) {
     try {
       const issueContext = `Title: ${issue.title}\nSeverity: ${issue.severity}\nRule: ${issue.ruleCode}\nURL: ${issue.page?.url}`;
       const res = await api.post('/ai/explain-issue', { issueContext });
-      setExplanation(res.data?.data || "Failed to analyze.");
+      setExplanation(res.data || "Failed to analyze.");
     } catch (e) {
       setExplanation("AI analysis is temporarily unavailable.");
     } finally {

@@ -42,6 +42,7 @@ import { AiChatAssistant } from "./ai-chat-assistant";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useLatestScan } from "@/hooks/use-latest-scan";
 import { CommandPalette } from "@/components/command-palette";
+import { FeedbackDialog } from "@/components/feedback-dialog";
 
 const navGroups = [
   {
@@ -149,6 +150,10 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           <Bot className="size-4" />
           AI Assistant
         </Button>
+      </div>
+      
+      <div className="mt-2 px-3">
+        <FeedbackDialog />
       </div>
     </nav>
   );
