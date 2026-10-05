@@ -113,6 +113,8 @@ model Project {
 model Scan {
   id               String       @id @default(uuid())
   projectId        String
+  competitorId     String?
+  scanType         String       @default("PROJECT") // PROJECT, COMPETITOR
   status           ScanStatus   @default(PENDING)
   progressPercentage Int        @default(0)
   pagesDiscovered  Int          @default(0)
@@ -125,6 +127,7 @@ model Scan {
   updatedAt        DateTime     @updatedAt
 
   project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  competitor       Competitor?  @relation(fields: [competitorId], references: [id], onDelete: Cascade)
   pages            Page[]
   aiSummary        AiSummary?
   report           Report?
@@ -132,6 +135,7 @@ model Scan {
   crawlLogs        CrawlLog[]
 
   @@index([projectId])
+  @@index([competitorId])
   @@index([status])
 }
 
@@ -366,13 +370,18 @@ model Keyword {
 }
 
 model Competitor {
-  id             String       @id @default(uuid())
-  projectId      String
-  domain         String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id               String       @id @default(uuid())
+  projectId        String
+  domain           String
+  normalizedDomain String?
+  status           String       @default("ACTIVE") // ACTIVE, SCANNING, COMPLETED, FAILED
+  lastScanId       String?
+  lastScannedAt    DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
-  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scans            Scan[]
 
   @@index([projectId])
 }

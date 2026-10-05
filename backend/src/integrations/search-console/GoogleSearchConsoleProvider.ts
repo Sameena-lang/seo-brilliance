@@ -57,7 +57,7 @@ export class GoogleSearchConsoleProvider implements IntegrationProvider {
     });
     if (!connection) throw new Error('Not connected');
 
-    const tokens = JSON.parse(connection.credentials || '{}');
+    const tokens = JSON.parse((connection.credentials as string) || '{}');
     const oauth2Client = this.getOAuth2Client();
     oauth2Client.setCredentials(tokens);
     
@@ -114,7 +114,7 @@ export class GoogleSearchConsoleProvider implements IntegrationProvider {
         data: { connectionId: connection.id, type: 'search-console-sync', status: 'RUNNING', startedAt: new Date() }
       });
 
-      const tokens = JSON.parse(connection.credentials || '{}');
+      const tokens = JSON.parse((connection.credentials as string) || '{}');
       const oauth2Client = this.getOAuth2Client();
       oauth2Client.setCredentials(tokens);
       

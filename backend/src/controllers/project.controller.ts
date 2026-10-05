@@ -119,6 +119,36 @@ export const addCompetitor = async (req: Request, res: Response, next: NextFunct
     const competitor = await intelligenceService.addCompetitor(String(req.params.id), req.body.domain, req.user.organizationId);
     res.status(201).json({ success: true, data: competitor });
   } catch (error: any) {
+    if (error.message && error.message.includes('Invalid domain')) {
+      return res.status(400).json({ success: false, error: { message: error.message } });
+    }
+    next(error);
+  }
+};
+
+export const scanCompetitor = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const scan = await intelligenceService.scanCompetitor(String(req.params.id), String(req.params.competitorId), req.user.organizationId);
+    res.status(200).json({ success: true, data: scan });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const deleteCompetitor = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await intelligenceService.deleteCompetitor(String(req.params.id), String(req.params.competitorId), req.user.organizationId);
+    res.status(200).json({ success: true, data: { message: 'Competitor deleted' } });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const getCompetitorComparison = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const comparison = await intelligenceService.getCompetitorComparison(String(req.params.id), req.user.organizationId);
+    res.status(200).json({ success: true, data: comparison });
+  } catch (error: any) {
     next(error);
   }
 };

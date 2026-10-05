@@ -23,11 +23,16 @@ export const isAllowedDomain = (urlStr: string, rootUrlStr: string, includeSubdo
     if (includeSubdomains) {
       return url.hostname.endsWith(rootUrl.hostname);
     }
-    // Exact match mode: check exact equality of pathname
+    // Exact match mode: must match hostname exactly, and path must be under rootUrl path
     if (url.hostname !== rootUrl.hostname) return false;
     const normUrlPath = url.pathname.replace(/\/$/, '') || '/';
     const normRootPath = rootUrl.pathname.replace(/\/$/, '') || '/';
-    return normUrlPath === normRootPath;
+    
+    // If root is '/', all paths are allowed on that hostname
+    if (normRootPath === '/') return true;
+    
+    // Otherwise, ensure the new path is a sub-path of the root path
+    return normUrlPath === normRootPath || normUrlPath.startsWith(normRootPath + '/');
   } catch (error) {
     return false;
   }

@@ -169,6 +169,13 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
            where: { id: scanId },
            data: { status: 'COMPLETED', progressPercentage: 100, finishedAt: new Date() }
          });
+         
+         if (scan.competitorId) {
+           await prisma.competitor.update({
+             where: { id: scan.competitorId },
+             data: { status: 'COMPLETED' }
+           });
+         }
 
          await aiQueue.add('generateSummary', { scanId });
       }

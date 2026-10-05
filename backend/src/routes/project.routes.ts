@@ -21,6 +21,9 @@ router.get('/:id/keywords', projectController.getKeywords);
 router.post('/:id/keywords', projectController.addKeyword);
 router.get('/:id/competitors', projectController.getCompetitors);
 router.post('/:id/competitors', projectController.addCompetitor);
+router.get('/:id/competitors/compare', projectController.getCompetitorComparison);
+router.post('/:id/competitors/:competitorId/scan', projectController.scanCompetitor);
+router.delete('/:id/competitors/:competitorId', projectController.deleteCompetitor);
 router.get('/:id/search-console', projectController.getSearchConsoleMetrics);
 router.get('/:id/analytics', projectController.getAnalyticsMetrics);
 

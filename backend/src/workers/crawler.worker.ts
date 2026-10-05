@@ -31,7 +31,8 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     include: {
       project: {
         include: { organization: true }
-      }
+      },
+      competitor: true
     }
   });
   if (!scan) {
@@ -232,7 +233,9 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     await seoQueue.add('analyzeSeo', { scanId, pageId: page.id });
 
     // Queue internal links
-    const rootUrlStr = scan.project?.rootUrl || normUrl;
+    const rootUrlStr = scan.scanType === 'COMPETITOR' && scan.competitor 
+      ? `https://${scan.competitor.domain}` 
+      : (scan.project?.rootUrl || normUrl);
     const includeSubdomains = settings?.includeSubdomains === true;
     
     let newlyDiscovered = 0;
@@ -286,6 +289,8 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     await seoQueue.add('analyzeSeo', { scanId, pageId: page.id });
   }
 });
+
+// Helper to determine if a domain is allowed (already exists in crawler/utils but needs rootUrl check)
 
 crawlerWorker.on('failed', (job, err) => {
   console.error(`Crawl job ${job?.id} failed:`, err);
