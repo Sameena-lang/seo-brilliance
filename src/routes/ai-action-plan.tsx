@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Sparkles, Bot, Calendar, CheckCircle2, Circle, ArrowRight } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Sparkles, Bot, Calendar, CheckCircle2, Circle, ArrowRight, RefreshCw, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import ReactMarkdown from 'react-markdown';
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActiveProject } from "@/hooks/use-active-project";
 
 export const Route = createFileRoute("/ai-action-plan")({
   component: AIActionPlanRoute,
@@ -17,18 +18,12 @@ function AIActionPlanRoute() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
 
-  const { data: projectsRes } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => api.get('/projects').then(res => res.data),
-  });
-
-  const latestProject = Array.isArray(projectsRes) ? projectsRes[0] : projectsRes?.data?.[0];
-  const latestScanId = latestProject?.scans?.[0]?.id;
+  const { activeProject } = useActiveProject();
 
   const { data: issuesRes } = useQuery({
-    queryKey: ['issues', latestScanId],
-    queryFn: () => api.get(`/issues/${latestScanId}?limit=50`).then(res => res.data),
-    enabled: !!latestScanId,
+    queryKey: ['issues', activeProject?.id],
+    queryFn: () => api.get(`/issues?projectId=${activeProject?.id || ''}&limit=50`).then(res => res.data),
+    enabled: !!activeProject?.id,
   });
 
   const issues = Array.isArray(issuesRes) ? issuesRes : (issuesRes?.data?.issues || issuesRes?.issues || []);
@@ -43,7 +38,7 @@ function AIActionPlanRoute() {
       const issuesContext = issues.slice(0, 20).map((i: any) => `- [${i.severity}] ${i.title} (${i.ruleCode}) on ${i.page?.url}`).join('\n');
       
       const response = await api.post('/ai/action-plan', { issuesContext });
-      setActionPlan(response.data?.data || "Failed to generate action plan.");
+      setActionPlan(response.data || "Failed to generate action plan.");
     } catch (error) {
       console.error(error);
       setActionPlan("AI analysis is temporarily unavailable.");
@@ -88,7 +83,7 @@ function AIActionPlanRoute() {
               Your Customized SEO Roadmap
             </CardTitle>
             <CardDescription>
-              Based on {issues.length} issues found in the latest scan for {latestProject?.domain}
+              Based on {issues.length} issues found in the latest scan for {activeProject?.domain}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -106,8 +101,23 @@ function AIActionPlanRoute() {
                 </div>
               </div>
             ) : (
-              <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none prose-h3:text-primary prose-li:marker:text-primary">
-                <ReactMarkdown>{actionPlan}</ReactMarkdown>
+              <div className="space-y-8">
+                <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none prose-h3:text-primary prose-li:marker:text-primary prose-strong:text-primary">
+                  <ReactMarkdown>{actionPlan}</ReactMarkdown>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-border/50">
+                  <Button asChild className="gap-2">
+                    <Link to="/ai-copilot">
+                      <MessageSquare className="size-4" />
+                      Discuss Plan with AI Copilot
+                    </Link>
+                  </Button>
+                  <Button variant="outline" onClick={handleGenerate} disabled={isGenerating} className="gap-2">
+                    <RefreshCw className={`size-4 ${isGenerating ? 'animate-spin' : ''}`} />
+                    Regenerate Roadmap
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

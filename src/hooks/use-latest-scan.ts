@@ -6,9 +6,9 @@ export function useLatestScan(projectId: string | null) {
   return useQuery({
     queryKey: queryKeys.scans.byProject(projectId ?? ''),
     queryFn: async () => {
-      // First get all scans for the project
-      const res = await api.get(`/projects/${projectId}/scans`);
-      const scans = res.data?.scans || [];
+      // Get scan history for the project
+      const history = await api.get(`/projects/${projectId}/history`);
+      const scans = history.data || [];
       
       // Find the latest completed scan
       const completedScans = scans.filter((s: any) => s.status === 'COMPLETED');

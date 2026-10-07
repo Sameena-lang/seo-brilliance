@@ -78,8 +78,8 @@ const authLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 app.use('/api/v1/auth', authLimiter);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 import authRoutes from './routes/auth.routes';
 import projectRoutes from './routes/project.routes';

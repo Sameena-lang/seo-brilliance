@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { useActiveProject } from "@/hooks/use-active-project";
 
+import { useState } from "react";
+
 export const Route = createFileRoute("/issues/")({
   component: IssuesRoute,
 });
@@ -19,6 +21,7 @@ function IssuesRoute() {
   const search: any = Route.useSearch();
   const scanId = search?.scanId;
   const { activeProject } = useActiveProject();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: issuesRes, isLoading } = useQuery({
     queryKey: ['issues', scanId, activeProject?.id],
@@ -29,7 +32,16 @@ function IssuesRoute() {
     refetchInterval: 5000,
   });
 
-  let issues = issuesRes?.issues || [];
+  let issues = issuesRes?.data?.issues || issuesRes?.issues || [];
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    issues = issues.filter((issue: any) => 
+      issue.title?.toLowerCase().includes(q) || 
+      issue.ruleCode?.toLowerCase().includes(q) || 
+      issue.page?.url?.toLowerCase().includes(q)
+    );
+  }
 
   if (search?.category) {
     const targetCat = search.category.toLowerCase();
@@ -41,6 +53,10 @@ function IssuesRoute() {
       
       return catKey.toLowerCase() === targetCat;
     });
+  }
+
+  if (search?.ruleCode) {
+    issues = issues.filter((issue: any) => issue.ruleCode === search.ruleCode);
   }
 
   return (
@@ -57,6 +73,8 @@ function IssuesRoute() {
                 type="search"
                 placeholder="Search issues by name or URL..."
                 className="pl-9 bg-background"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Button variant="outline" className="gap-2 shrink-0">

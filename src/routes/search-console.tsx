@@ -62,7 +62,7 @@ function SearchConsoleRoute() {
   }
 
   const metrics = metricsRes?.data || metricsRes || [];
-  const latestMetric = metrics[0] ? JSON.parse(metrics[0].metrics) : null;
+  const latestMetric = metrics[0] ? (typeof metrics[0].metrics === 'string' ? JSON.parse(metrics[0].metrics) : metrics[0].metrics) : null;
 
   return (
     <AppShell

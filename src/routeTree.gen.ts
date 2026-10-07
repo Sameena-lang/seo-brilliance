@@ -31,6 +31,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as IssuesIndexRouteImport } from './routes/issues.index'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues.$issueId'
+import { Route as PagesIndexRouteImport } from './routes/pages.index'
 import { Route as PagesPageIdRouteImport } from './routes/pages.$pageId'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
@@ -148,6 +149,11 @@ const IssuesIssueIdRoute = IssuesIssueIdRouteImport.update({
   path: '/issues/$issueId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PagesIndexRoute = PagesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PagesRoute,
+} as any)
 const PagesPageIdRoute = PagesPageIdRouteImport.update({
   id: '/$pageId',
   path: '/$pageId',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/scan/results': typeof ScanResultsRoute
   '/admin/': typeof AdminIndexRoute
   '/issues/': typeof IssuesIndexRoute
+  '/pages/': typeof PagesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/scan/': typeof ScanIndexRoute
 }
@@ -222,7 +229,6 @@ export interface FileRoutesByTo {
   '/keywords': typeof KeywordsRoute
   '/login': typeof LoginRoute
   '/opportunities': typeof OpportunitiesRoute
-  '/pages': typeof PagesRouteWithChildren
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/search-console': typeof SearchConsoleRoute
@@ -235,6 +241,7 @@ export interface FileRoutesByTo {
   '/scan/results': typeof ScanResultsRoute
   '/admin': typeof AdminIndexRoute
   '/issues': typeof IssuesIndexRoute
+  '/pages': typeof PagesIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/scan': typeof ScanIndexRoute
 }
@@ -266,6 +273,7 @@ export interface FileRoutesById {
   '/scan/results': typeof ScanResultsRoute
   '/admin/': typeof AdminIndexRoute
   '/issues/': typeof IssuesIndexRoute
+  '/pages/': typeof PagesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/scan/': typeof ScanIndexRoute
 }
@@ -298,6 +306,7 @@ export interface FileRouteTypes {
     | '/scan/results'
     | '/admin/'
     | '/issues/'
+    | '/pages/'
     | '/projects/'
     | '/scan/'
   fileRoutesByTo: FileRoutesByTo
@@ -314,7 +323,6 @@ export interface FileRouteTypes {
     | '/keywords'
     | '/login'
     | '/opportunities'
-    | '/pages'
     | '/register'
     | '/reports'
     | '/search-console'
@@ -327,6 +335,7 @@ export interface FileRouteTypes {
     | '/scan/results'
     | '/admin'
     | '/issues'
+    | '/pages'
     | '/projects'
     | '/scan'
   id:
@@ -357,6 +366,7 @@ export interface FileRouteTypes {
     | '/scan/results'
     | '/admin/'
     | '/issues/'
+    | '/pages/'
     | '/projects/'
     | '/scan/'
   fileRoutesById: FileRoutesById
@@ -546,6 +556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IssuesIssueIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pages/': {
+      id: '/pages/'
+      path: '/'
+      fullPath: '/pages/'
+      preLoaderRoute: typeof PagesIndexRouteImport
+      parentRoute: typeof PagesRoute
+    }
     '/pages/$pageId': {
       id: '/pages/$pageId'
       path: '/$pageId'
@@ -603,10 +620,12 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface PagesRouteChildren {
   PagesPageIdRoute: typeof PagesPageIdRoute
+  PagesIndexRoute: typeof PagesIndexRoute
 }
 
 const PagesRouteChildren: PagesRouteChildren = {
   PagesPageIdRoute: PagesPageIdRoute,
+  PagesIndexRoute: PagesIndexRoute,
 }
 
 const PagesRouteWithChildren = PagesRoute._addFileChildren(PagesRouteChildren)

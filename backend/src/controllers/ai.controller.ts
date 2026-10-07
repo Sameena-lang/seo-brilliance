@@ -24,10 +24,20 @@ export const chat = async (req: Request, res: Response, next: NextFunction) => {
 
     let contextString = "The user has not selected a specific website scan for context. You are acting as a general SEO assistant.";
 
-    if (scanId) {
+    let targetScanId = scanId;
+
+    if (!targetScanId && req.body.projectId) {
+      const latestScan = await prisma.scan.findFirst({
+        where: { projectId: req.body.projectId, status: 'COMPLETED', scanType: 'PROJECT' },
+        orderBy: { createdAt: 'desc' }
+      });
+      targetScanId = latestScan?.id;
+    }
+
+    if (targetScanId) {
       // Verify scan ownership
       const scan = await prisma.scan.findFirst({
-        where: { id: scanId, project: { organizationId } },
+        where: { id: targetScanId, project: { organizationId } },
         include: { project: true, siteScore: true }
       });
 
@@ -40,14 +50,14 @@ export const chat = async (req: Request, res: Response, next: NextFunction) => {
       // Fetch context-specific data
       if (issueId) {
         const issue = await prisma.issue.findFirst({
-          where: { id: issueId, page: { scanId } }
+          where: { id: issueId, page: { scanId: targetScanId } }
         });
         if (issue) {
           contextString += `Specific Issue User is Asking About:\n- Title: ${issue.title}\n- Severity: ${issue.severity}\n- Rule: ${issue.ruleCode}\n- Found on URL: ${issue.url}\n\n`;
         }
       } else if (pageId) {
         const page = await prisma.page.findFirst({
-          where: { id: pageId, scanId },
+          where: { id: pageId, scanId: targetScanId },
           include: { issues: true }
         });
         if (page) {
@@ -57,7 +67,7 @@ export const chat = async (req: Request, res: Response, next: NextFunction) => {
       } else {
         // General scan context - REDUCED TO 3 ISSUES TO SAVE CONTEXT SIZE
         const topIssues = await prisma.issue.findMany({
-          where: { page: { scanId } },
+          where: { page: { scanId: targetScanId } },
           orderBy: { severity: 'asc' },
           take: 3
         });
@@ -121,10 +131,24 @@ ${contextString}
         systemInstruction: systemPrompt,
       });
 
-      const formattedHistory = history.map((m: any) => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }]
-      }));
+      const formattedHistory = history.map((m: any) => {
+        const parts: any[] = [{ text: m.content }];
+        if (m.image && m.image.includes(';base64,')) {
+          const splitData = m.image.split(';base64,');
+          if (splitData.length === 2) {
+            parts.push({
+              inlineData: {
+                data: splitData[1],
+                mimeType: splitData[0].replace('data:', '')
+              }
+            });
+          }
+        }
+        return {
+          role: m.role === 'user' ? 'user' : 'model',
+          parts
+        };
+      });
 
       const chatSession = model.startChat({
         history: formattedHistory,
@@ -136,12 +160,25 @@ ${contextString}
       res.setHeader('Connection', 'keep-alive');
       res.flushHeaders();
 
-      // Start streaming with a 15-second timeout for the first chunk
+      // Start streaming with a 45-second timeout for the first chunk
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('AI Request Timeout')), 15000)
+        setTimeout(() => reject(new Error('AI Request Timeout')), 45000)
       );
 
-      const streamPromise = chatSession.sendMessageStream(message);
+      let currentMessageParts: any[] = [{ text: message }];
+      if (req.body.image && req.body.image.includes(';base64,')) {
+        const splitData = req.body.image.split(';base64,');
+        if (splitData.length === 2) {
+          currentMessageParts.push({
+            inlineData: {
+              data: splitData[1],
+              mimeType: splitData[0].replace('data:', '')
+            }
+          });
+        }
+      }
+
+      const streamPromise = chatSession.sendMessageStream(currentMessageParts);
       
       const result = await Promise.race([streamPromise, timeoutPromise]) as any;
 

@@ -30,7 +30,7 @@ function AIGenerator({ type, page }: { type: 'title' | 'description' | 'content'
         headings: `H1: ${page.h1}\nH2 Count: ${page.h2Count}`,
         contentSummary: `Word Count: ${page.wordCount}`
       });
-      setSuggestions(Array.isArray(res.data?.data) ? res.data.data : [res.data.data]);
+      setSuggestions(Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []));
     } catch (e) {
       setSuggestions([{ error: "AI analysis is temporarily unavailable." }]);
     } finally {
@@ -152,7 +152,7 @@ function PageProfileRoute() {
         <div className="flex gap-2">
           <Button variant="outline" asChild><Link to="/pages">Back to Inventory</Link></Button>
           <Button variant="outline" asChild>
-            <a href={page.url} target="_blank" rel="noreferrer" className="gap-2">
+            <a href={page.url.startsWith('http') ? page.url : `https://${page.url}`} target="_blank" rel="noreferrer" className="gap-2">
               <ExternalLink className="size-4" /> Open URL
             </a>
           </Button>
@@ -174,7 +174,7 @@ function PageProfileRoute() {
           <CardHeader className="bg-muted/20 border-b border-border pb-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                 <CardTitle className="text-xl break-all"><a href={page.url} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">{page.url}</a></CardTitle>
+                 <CardTitle className="text-xl break-all"><a href={page.url.startsWith('http') ? page.url : `https://${page.url}`} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">{page.url}</a></CardTitle>
                  <div className="flex items-center gap-3 mt-2">
                    <Badge variant={page.statusCode === 200 ? "outline" : "destructive"} className={page.statusCode === 200 ? "text-success border-success/30" : ""}>
                      {page.statusCode || 'Unknown'}

@@ -50,7 +50,7 @@ export const getAllIssues = async (req: Request, res: Response, next: NextFuncti
       select: {
         id: true,
         scans: {
-          where: { status: 'COMPLETED' },
+          where: { status: 'COMPLETED', scanType: 'PROJECT' },
           orderBy: { createdAt: 'desc' },
           take: 1,
           select: { id: true }

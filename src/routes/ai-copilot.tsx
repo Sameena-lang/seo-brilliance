@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Bot, Send, User, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
+import { Bot, Send, User, Sparkles, AlertCircle, RefreshCw, Copy, Check, Pencil, ImageIcon, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,49 +8,123 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import ReactMarkdown from 'react-markdown';
 
+import { useActiveProject } from "@/hooks/use-active-project";
+
 export const Route = createFileRoute("/ai-copilot")({
   component: AICopilotRoute,
 });
 
 function AICopilotRoute() {
-  const [messages, setMessages] = useState<{ role: 'user' | 'model', content: string }[]>([]);
+  const [messages, setMessages] = useState<{ role: 'user' | 'model', content: string, image?: string }[]>([]);
   const [input, setInput] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleCopy = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Assume user wants the context of the latest project
-  const { data: projectsRes } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => api.get('/projects').then(res => res.data),
-  });
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1000;
 
-  const latestProject = Array.isArray(projectsRes) ? projectsRes[0] : projectsRes?.data?.[0];
-  const latestScanId = latestProject?.scans?.[0]?.id;
+          if (width > height) {
+            if (width > maxDim) {
+              height *= maxDim / width;
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width *= maxDim / height;
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 15 * 1024 * 1024) {
+        alert("Image must be smaller than 15MB");
+        return;
+      }
+      const compressed = await compressImage(file);
+      setSelectedImage(compressed);
+    }
+  };
+
+  const { activeProject } = useActiveProject();
+  const latestProjectId = activeProject?.id;
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (const item of Array.from(items)) {
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          if (file.size > 15 * 1024 * 1024) {
+            alert("Image must be smaller than 15MB");
+            return;
+          }
+          const compressed = await compressImage(file);
+          setSelectedImage(compressed);
+        }
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent | string) => {
     if (typeof e !== 'string') e.preventDefault();
     const text = typeof e === 'string' ? e : input;
-    if (!text.trim()) return;
+    if (!text.trim() && !selectedImage) return;
 
     setInput("");
-    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    const imageToSend = selectedImage;
+    setSelectedImage(null);
+    setMessages(prev => [...prev, { role: 'user', content: text, image: imageToSend || undefined }]);
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env['VITE_API_URL']}/api/ai/chat`, {
+      const baseURL = api.defaults.baseURL || 'http://localhost:5000/api/v1';
+      const response = await fetch(`${baseURL}/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          scanId: latestScanId,
+          projectId: latestProjectId,
           message: text,
+          image: imageToSend,
           history: messages
         })
       });
@@ -148,12 +222,39 @@ function AICopilotRoute() {
                       <Bot className="size-5 text-primary" />
                     </div>
                   )}
-                  <div className={`rounded-2xl px-4 py-3 max-w-[80%] ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background border shadow-sm'}`}>
+                  <div className={`group relative rounded-2xl px-4 py-3 max-w-[80%] ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background border shadow-sm'}`}>
                     {m.role === 'user' ? (
-                      m.content
+                      <div className="flex flex-col items-end gap-2">
+                        {m.image && (
+                          <img src={m.image} alt="User uploaded" className="max-w-full max-h-60 rounded-lg object-contain bg-white/10" />
+                        )}
+                        <div className="flex items-start gap-2 w-full">
+                          <div className="flex-1 whitespace-pre-wrap">{m.content}</div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/20 shrink-0 -mr-2" 
+                            onClick={() => setInput(m.content)}
+                            title="Edit Question"
+                          >
+                            <Pencil className="size-3" />
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted prose-pre:text-muted-foreground">
-                        <ReactMarkdown>{m.content}</ReactMarkdown>
+                      <div className="relative">
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted prose-pre:text-muted-foreground pb-6">
+                          <ReactMarkdown>{m.content}</ReactMarkdown>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute -bottom-1 -right-2 h-6 px-2 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleCopy(m.content, i)}
+                        >
+                          {copiedIndex === i ? <Check className="size-3 mr-1 text-success" /> : <Copy className="size-3 mr-1" />}
+                          {copiedIndex === i ? "Copied" : "Copy"}
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -178,16 +279,36 @@ function AICopilotRoute() {
             )}
             <div ref={messagesEndRef} />
           </CardContent>
-          <div className="p-4 bg-background border-t">
-            <form onSubmit={handleSubmit} className="flex gap-2">
+          <div className="p-4 bg-background border-t flex flex-col gap-2">
+            {selectedImage && (
+              <div className="relative inline-block w-fit">
+                <img src={selectedImage} alt="Preview" className="h-20 rounded-md border shadow-sm object-cover" />
+                <Button 
+                  variant="destructive" 
+                  size="icon" 
+                  className="absolute -top-2 -right-2 size-5 rounded-full"
+                  onClick={() => setSelectedImage(null)}
+                >
+                  <X className="size-3" />
+                </Button>
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+              <label className="shrink-0">
+                <Input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                <div className="h-10 px-3 py-2 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer text-muted-foreground transition-colors" title="Upload Image">
+                  <ImageIcon className="size-4" />
+                </div>
+              </label>
               <Input 
                 value={input} 
                 onChange={(e) => setInput(e.target.value)} 
-                placeholder="Ask anything about your website..." 
-                className="flex-1"
+                onPaste={handlePaste}
+                placeholder="Ask anything about your website... (You can also paste screenshots here)" 
+                className="flex-1 h-10"
                 disabled={isLoading}
               />
-              <Button type="submit" disabled={isLoading || !input.trim()}>
+              <Button type="submit" disabled={isLoading || (!input.trim() && !selectedImage)} className="h-10">
                 <Send className="size-4" />
                 <span className="sr-only">Send</span>
               </Button>
@@ -214,15 +335,15 @@ function AICopilotRoute() {
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="size-1.5 rounded-full bg-success"></div>
-                    {latestProject?.scans?.[0]?.issuesFound || 0} issues
+                    {activeProject?.domain || 'Website'}
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="size-1.5 rounded-full bg-success"></div>
-                    {latestProject?.scans?.[0]?.pagesCrawled || 0} crawled pages
+                    Connected to backend
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="size-1.5 rounded-full bg-success"></div>
-                    Overall SEO Score: {latestProject?.scans?.[0]?.siteScore?.overallScore || 'N/A'}
+                    Ready to analyze
                   </li>
                 </ul>
               </div>

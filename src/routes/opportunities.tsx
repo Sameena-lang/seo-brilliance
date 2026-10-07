@@ -121,7 +121,7 @@ function OpportunitiesRoute() {
                     </div>
                     <div className="flex shrink-0">
                       <Button variant="outline" className="gap-2" asChild>
-                        <Link to="/issues" search={{ category: opp.ruleCode?.split('-')[0] }}>
+                        <Link to="/issues" search={{ ruleCode: opp.ruleCode }}>
                           View Issues <ArrowRight className="size-4" />
                         </Link>
                       </Button>
