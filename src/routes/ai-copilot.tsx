@@ -110,7 +110,7 @@ function AICopilotRoute() {
     setInput("");
     const imageToSend = selectedImage;
     setSelectedImage(null);
-    setMessages(prev => [...prev, { role: 'user', content: text, image: imageToSend || undefined }]);
+    setMessages(prev => [...prev, { role: 'user', content: text, ...(imageToSend ? { image: imageToSend } : {}) }]);
     setIsLoading(true);
 
     try {

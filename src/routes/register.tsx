@@ -19,12 +19,18 @@ function RegisterRoute() {
   const registerMutation = useMutation({
     mutationFn: (data: any) => api.post('/auth/register', data),
     onSuccess: (data: any) => {
-      localStorage.setItem('token', data.data.token);
-      queryClient.setQueryData(['auth', 'me'], data.data.user);
+      const token = data?.data?.token || data?.token;
+      const user = data?.data?.user || data?.user;
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+      if (user) {
+        queryClient.setQueryData(['auth', 'me'], user);
+      }
       navigate({ to: "/dashboard" });
     },
     onError: (err: any) => {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError(err?.message || (typeof err === 'string' ? err : 'Registration failed. Please try again.'));
     }
   });
 
@@ -116,8 +122,8 @@ function RegisterRoute() {
             </div>
 
             <div>
-              <Button type="submit" className="w-full shadow-md shadow-primary/20">
-                Create account
+              <Button type="submit" disabled={registerMutation.isPending} className="w-full shadow-md shadow-primary/20">
+                {registerMutation.isPending ? "Creating account..." : "Create account"}
               </Button>
             </div>
           </form>

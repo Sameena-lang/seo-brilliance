@@ -32,7 +32,8 @@ app.use(cors({
       /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
       /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
       /^https?:\/\/(10|192\.168|172\.(1[6-9]|2[0-9]|3[0-1]))\.\d+\.\d+\.\d+(:\d+)?$/.test(origin) ||
-      /^https:\/\/[a-zA-Z0-9-]+(-[a-zA-Z0-9]+)*\.vercel\.app$/.test(origin)
+      /^https:\/\/[a-zA-Z0-9-]+(-[a-zA-Z0-9]+)*\.vercel\.app$/.test(origin) ||
+      /^https?:\/\/([a-zA-Z0-9-]+\.)*(lovableproject\.com|lovable\.app|lovable\.dev)$/.test(origin)
     ) {
       return callback(null, true);
     }
@@ -126,12 +127,30 @@ app.get('/health', async (req: Request, res: Response) => {
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
+  console.error('Unhandled request error:', err);
+  if (err instanceof SyntaxError && 'status' in err && (err as any).status === 400) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'BAD_REQUEST',
+        message: 'Malformed JSON payload in request body.',
+      },
+    });
+  }
+  if (err.message && err.message.startsWith('Not allowed by CORS')) {
+    return res.status(403).json({
+      success: false,
+      error: {
+        code: 'CORS_ERROR',
+        message: err.message,
+      },
+    });
+  }
   res.status(500).json({
     success: false,
     error: {
       code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unexpected error occurred.',
+      message: err.message || 'An unexpected error occurred.',
     },
   });
 });

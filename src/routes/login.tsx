@@ -20,12 +20,18 @@ function LoginRoute() {
   const loginMutation = useMutation({
     mutationFn: (credentials: any) => api.post('/auth/login', credentials),
     onSuccess: (data: any) => {
-      localStorage.setItem('token', data.data.token);
-      queryClient.setQueryData(['auth', 'me'], data.data.user);
+      const token = data?.data?.token || data?.token;
+      const user = data?.data?.user || data?.user;
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+      if (user) {
+        queryClient.setQueryData(['auth', 'me'], user);
+      }
       navigate({ to: "/dashboard" });
     },
     onError: (err: any) => {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err?.message || (typeof err === 'string' ? err : 'Login failed. Please check your credentials.'));
     }
   });
 
@@ -101,8 +107,8 @@ function LoginRoute() {
             </div>
 
             <div>
-              <Button type="submit" className="w-full shadow-md shadow-primary/20">
-                Sign in
+              <Button type="submit" disabled={loginMutation.isPending} className="w-full shadow-md shadow-primary/20">
+                {loginMutation.isPending ? "Signing in..." : "Sign in"}
               </Button>
             </div>
           </form>

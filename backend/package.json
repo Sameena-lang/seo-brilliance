@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "start:worker": "node dist/worker.js",
-    "render:build": "npm install --include=dev && npx prisma generate && npx prisma migrate deploy && npm run build",
+    "render:build": "npm install --include=dev && npx prisma generate && npx prisma db push --accept-data-loss && npm run build",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",

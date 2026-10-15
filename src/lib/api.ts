@@ -35,7 +35,20 @@ api.interceptors.response.use(
     }
     
     // Format error to a consistent structure
-    const errObj = error.response?.data?.error || { message: error.message || 'An unexpected error occurred' };
+    const serverError = error.response?.data?.error;
+    let message = 'An unexpected error occurred';
+    if (typeof serverError === 'string') {
+      message = serverError;
+    } else if (serverError?.message) {
+      message = serverError.message;
+    } else if (error.response?.data?.message) {
+      message = error.response.data.message;
+    } else if (error.message) {
+      message = error.message;
+    }
+    const errObj = typeof serverError === 'object' && serverError !== null
+      ? { ...serverError, message }
+      : { message };
     return Promise.reject(errObj);
   }
 );
