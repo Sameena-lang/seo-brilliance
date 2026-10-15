@@ -56,8 +56,8 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
   
   if (scan) {
     const maxPages = (scan.project.crawlSettings as any)?.maxPages || 100;
-    const isDone = scan.pagesDiscovered === 0 || (
-      scan.pagesCrawled + scan.pagesFailed >= scan.pagesDiscovered ||
+    const isDone = (
+      (scan.pagesDiscovered > 0 && scan.pagesCrawled + scan.pagesFailed >= scan.pagesDiscovered) ||
       scan.pagesCrawled + scan.pagesFailed >= maxPages
     );
 
@@ -165,10 +165,17 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
            create: { scanId, overallScore, technicalScore, contentScore, indexabilityScore, performanceScore, accessibilityScore, structuredDataScore, criticalCount: criticals, warningCount: warnings, infoCount: infos }
          });
 
-         await prisma.scan.update({
-           where: { id: scanId },
-           data: { status: 'COMPLETED', progressPercentage: 100, finishedAt: new Date() }
-         });
+         try { const { clearScanTracking } = require('./crawler.worker'); clearScanTracking(scanId); } catch (e) {}
+
+          await prisma.scan.update({
+            where: { id: scanId },
+            data: {
+              status: 'COMPLETED',
+              progressPercentage: 100,
+              finishedAt: new Date(),
+              pagesDiscovered: Math.max(scan.pagesDiscovered, scan.pagesCrawled + scan.pagesFailed)
+            }
+          });
          
          if (scan.competitorId) {
            await prisma.competitor.update({
@@ -180,9 +187,9 @@ export const seoWorker = new Worker('seoQueue', async (job: Job) => {
          await aiQueue.add('generateSummary', { scanId });
       }
     } else {
-      const total = Math.min(scan.pagesDiscovered || 1, maxPages);
+      const total = Math.max(1, Math.min(scan.pagesDiscovered || 1, maxPages));
       const done = scan.pagesCrawled + scan.pagesFailed;
-      const progress = Math.min(Math.floor((done / total) * 100), 99);
+      const progress = Math.max(0, Math.min(Math.floor((done / total) * 100), 99));
       
       await prisma.scan.update({
         where: { id: scanId },

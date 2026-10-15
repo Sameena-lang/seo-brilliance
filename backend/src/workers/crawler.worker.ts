@@ -19,8 +19,48 @@ const axiosClient = axios.create({
   validateStatus: () => true
 });
 
-// In-memory cache for deduplication to prevent DB roundtrips for pageExists
-const visitedCache = new Map<string, Set<string>>();
+// In-memory tracking for deduplication:
+// - queuedUrls: prevents queueing duplicate jobs
+// - crawledUrls: prevents crawling the same page multiple times
+interface ScanTracking {
+  queuedUrls: Set<string>;
+  crawledUrls: Set<string>;
+}
+const scanTracking = new Map<string, ScanTracking>();
+
+export const getScanTracking = (scanId: string): ScanTracking => {
+  let tracking = scanTracking.get(scanId);
+  if (!tracking) {
+    tracking = {
+      queuedUrls: new Set<string>(),
+      crawledUrls: new Set<string>(),
+    };
+    scanTracking.set(scanId, tracking);
+  }
+  return tracking;
+};
+
+export const clearScanTracking = (scanId: string) => {
+  scanTracking.delete(scanId);
+};
+
+// Safely decrement pagesDiscovered without dropping below pagesCrawled + pagesFailed or negative
+const safeDecrementDiscovered = async (scanId: string) => {
+  try {
+    const s = await prisma.scan.findUnique({
+      where: { id: scanId },
+      select: { pagesDiscovered: true, pagesCrawled: true, pagesFailed: true }
+    });
+    if (s && s.pagesDiscovered > (s.pagesCrawled + s.pagesFailed) && s.pagesDiscovered > 0) {
+      await prisma.scan.update({
+        where: { id: scanId },
+        data: { pagesDiscovered: { decrement: 1 } }
+      });
+    }
+  } catch (err) {
+    // Ignore concurrency conflicts
+  }
+};
 
 export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
   console.log(`[Worker] Started job ${job.id} for scan ${job.data.scanId}`);
@@ -44,21 +84,42 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     return; // Stop if scan is aborted
   }
 
+  const tracking = getScanTracking(scanId);
+  const normUrl = normalizeUrl(url, url);
+
   console.log(`[Worker] Scan ${scanId} found. Depth: ${currentDepth}`);
   if (currentDepth === 0) {
+    if (normUrl) tracking.queuedUrls.add(normUrl);
     await prisma.scan.update({
       where: { id: scanId },
-      data: { status: 'RUNNING', startedAt: new Date(), pagesDiscovered: { increment: 2 } }
+      data: { status: 'RUNNING', startedAt: new Date() }
     });
     console.log(`[Worker] Updated scan ${scanId} to RUNNING`);
     
     try {
       const rootUrlObj = new URL(url);
       const rootOrigin = rootUrlObj.origin;
-      import('../queues').then(q => {
-        q.crawlQueue.add('startCrawl', { scanId, projectId, url: `${rootOrigin}/robots.txt`, settings, currentDepth: 1 });
-        q.crawlQueue.add('startCrawl', { scanId, projectId, url: `${rootOrigin}/sitemap.xml`, settings, currentDepth: 1 });
-      });
+      const robotsUrl = normalizeUrl(`${rootOrigin}/robots.txt`, url) || `${rootOrigin}/robots.txt`;
+      const sitemapUrl = normalizeUrl(`${rootOrigin}/sitemap.xml`, url) || `${rootOrigin}/sitemap.xml`;
+      
+      let initDiscovered = 0;
+      const q = await import('../queues');
+      if (!tracking.queuedUrls.has(robotsUrl)) {
+        tracking.queuedUrls.add(robotsUrl);
+        initDiscovered++;
+        q.crawlQueue.add('startCrawl', { scanId, projectId, url: robotsUrl, settings, currentDepth: 1 });
+      }
+      if (!tracking.queuedUrls.has(sitemapUrl)) {
+        tracking.queuedUrls.add(sitemapUrl);
+        initDiscovered++;
+        q.crawlQueue.add('startCrawl', { scanId, projectId, url: sitemapUrl, settings, currentDepth: 1 });
+      }
+      if (initDiscovered > 0) {
+        await prisma.scan.update({
+          where: { id: scanId },
+          data: { pagesDiscovered: { increment: initDiscovered } }
+        });
+      }
     } catch (e) {
       console.error('Failed to queue robots/sitemap', e);
     }
@@ -69,18 +130,13 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
     await prisma.crawlLog.create({
       data: { scanId, url, message: 'Unsafe URL detected and skipped', level: 'WARNING' }
     });
-    // It's unsafe, so it won't be crawled. Correct the pagesDiscovered count.
-    await prisma.scan.update({
-      where: { id: scanId },
-      data: { pagesDiscovered: { decrement: 1 } }
-    });
+    await safeDecrementDiscovered(scanId);
     await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
 
-  const normUrl = normalizeUrl(url, url);
   if (!normUrl) {
-    await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+    await safeDecrementDiscovered(scanId);
     await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
@@ -91,33 +147,26 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
 
   // Check max depth
   if (currentDepth > maxDepth) {
-    await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+    await safeDecrementDiscovered(scanId);
     await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
 
-  // In-memory deduplication first
-  let scanCache = visitedCache.get(scanId);
-  if (!scanCache) {
-    scanCache = new Set<string>();
-    visitedCache.set(scanId, scanCache);
-  }
-  
-  if (scanCache.has(normUrl)) {
-    // Already crawled or queued
-    await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+  // In-memory deduplication: prevent crawling if already crawled in this scan
+  if (tracking.crawledUrls.has(normUrl)) {
+    await safeDecrementDiscovered(scanId);
     await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
-  scanCache.add(normUrl);
+  tracking.crawledUrls.add(normUrl);
 
-  // Still check DB in case of process restart, but cache handles 99% of dupes
+  // Still check DB in case of process restart or multi-worker concurrency
   const pageExists = await prisma.page.findFirst({
     where: { scanId, normalizedUrl: normUrl }
   });
 
   if (pageExists) {
-    await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+    await safeDecrementDiscovered(scanId);
     await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
@@ -126,8 +175,8 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
   const maxPages = settings?.maxPages || defaultMaxPages;
   const reservedCount = await prisma.page.count({ where: { scanId } });
 
-  if (reservedCount > maxPages) {
-    await prisma.scan.update({ where: { id: scanId }, data: { pagesDiscovered: { decrement: 1 } } });
+  if (reservedCount >= maxPages) {
+    await safeDecrementDiscovered(scanId);
     await seoQueue.add('analyzeSeo', { scanId });
     return;
   }
@@ -154,17 +203,22 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
        if (location) {
          // Queue the redirect target
          const targetUrl = new URL(location, normUrl).href;
+         const normTarget = normalizeUrl(targetUrl, normUrl) || targetUrl;
+         let redirectDiscovered = 0;
+         if (!tracking.queuedUrls.has(normTarget) && !tracking.crawledUrls.has(normTarget)) {
+           tracking.queuedUrls.add(normTarget);
+           redirectDiscovered = 1;
+           const q = await import('../queues');
+           q.crawlQueue.add('startCrawl', { 
+             scanId, projectId, url: normTarget, settings, currentDepth: currentDepth + 1 
+           });
+         }
          await prisma.scan.update({
            where: { id: scanId },
            data: {
              pagesCrawled: { increment: 1 },
-             pagesDiscovered: { increment: 1 },
+             ...(redirectDiscovered > 0 ? { pagesDiscovered: { increment: 1 } } : {})
            }
-         });
-         import('../queues').then(q => {
-           q.crawlQueue.add('startCrawl', { 
-             scanId, projectId, url: targetUrl, settings, currentDepth: currentDepth + 1 
-           });
          });
        } else {
          await prisma.scan.update({
@@ -246,22 +300,26 @@ export const crawlerWorker = new Worker('crawlQueue', async (job: Job) => {
          continue;
        }
        
+       if (currentDepth + 1 > maxDepth) {
+         continue;
+       }
+       
        const normLink = normalizeUrl(link, url);
-       if (normLink && !scanCache.has(normLink)) {
-         scanCache.add(normLink); // Mark as queued
+       if (normLink && !tracking.queuedUrls.has(normLink) && !tracking.crawledUrls.has(normLink)) {
+         tracking.queuedUrls.add(normLink); // Mark as queued
          newlyDiscovered++;
          q.crawlQueue.add('startCrawl', { 
-           scanId, projectId, url: link, settings, currentDepth: currentDepth + 1 
+           scanId, projectId, url: normLink, settings, currentDepth: currentDepth + 1 
          });
        }
     }
 
-    // Update stats with ONLY newly discovered links to avoid +/- thrashing
+    // Update stats with newly discovered links
     await prisma.scan.update({
       where: { id: scanId },
       data: {
         pagesCrawled: { increment: 1 },
-        pagesDiscovered: { increment: newlyDiscovered }, 
+        ...(newlyDiscovered > 0 ? { pagesDiscovered: { increment: newlyDiscovered } } : {})
       }
     });
 
